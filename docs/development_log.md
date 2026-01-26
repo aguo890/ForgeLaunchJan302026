@@ -319,3 +319,43 @@ The documentation clarifies this as **slot-based insertion** rather than positio
 All tests pass, confirming the documented behavior matches implementation. The enhanced documentation provides:
 1. **Defensive programming** through explicit contracts
 2. **Self
+
+## [2026-01-26 18:11] Enhanced QA Report Automation with Robust Failure Handling
+
+### Context/Problem
+The previous verification system had two critical limitations:
+1. **Brittle string manipulation** for updating the QA report used fragile positional string slicing that could break with format changes
+2. **Premature exit on failure** prevented recording verification failures in the report, reducing observability into why submissions failed
+
+### Solution/Implementation
+Implemented a comprehensive refactor with three key changes:
+
+1. **Regex-based content replacement** in `update_qa_report()`:
+   - Used `re.sub()` with `re.DOTALL` flag for multi-line pattern matching
+   - Added ANSI code stripping from verification output
+   - Implemented dynamic status line updates with emoji indicators
+
+2. **Failure-tolerant verification flow**:
+   - Modified `run_verification()` to return `(output, success)` tuple instead of exiting
+   - Removed `check=True` from subprocess call to capture failure outputs
+   - Combined stdout and stderr for complete diagnostic information
+
+3. **Sequential execution logic**:
+   - Always update QA report first (pass or fail)
+   - Only exit after report update for failed verifications
+   - Added explicit status tracking throughout the pipeline
+
+### Rationale/Logic
+**Regex over string slicing**: String position-based updates (`find()` + slicing) are fragile to format changes. Regex patterns with named groups provide resilience against minor whitespace or formatting variations. The `re.DOTALL` flag ensures proper handling of multi-line log blocks.
+
+**Failure observability**: Previously, verification failures would exit immediately, leaving the QA report unchanged. This created a "black hole" where failed submissions had no audit trail. The new approach ensures all verification attempts (pass/fail) are recorded, enabling debugging and trend analysis.
+
+**Performance trade-off**: The regex operations add minimal overhead (O(n) string scanning) compared to the significant maintainability benefits. The subprocess execution remains the dominant cost factor.
+
+### Outcome
+- **Verification**: All existing tests pass with the new logic
+- **Robustness**: Report updates now handle edge cases (missing markers, ANSI codes, format variations)
+- **Observability**: Failed verifications now leave a complete diagnostic trail in the QA report
+- **Maintainability**: Regex patterns are more self-documenting than positional string arithmetic
+
+**Minor fixes**:
