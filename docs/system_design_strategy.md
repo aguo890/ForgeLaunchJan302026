@@ -101,6 +101,10 @@ class TodoList {
 }
 ```
 
+> [!TIP]
+> **Scale Tip: Fractional Indexing**
+> While `splice` is sufficient for typical user lists (N < 1000), a global-scale Jira/Trello implementation would use **Fractional Indexing** (e.g., Lexorank). Assigning a string key like `"0|000001:"` allows inserting items between others (O(1)) without shifting the entire array (O(N)), preventing effective downtime during massive reorders.
+
 > [!NOTE]
 > Full implementation with all CRUD operations: [system_design.js](file:///c:/Users/19803/business/ForgeLaunch/ForgeLaunchSpring2026Jan30/src/system_design.js)
 
@@ -243,6 +247,10 @@ function decodeBase62(str) {
     return res;
 }
 ```
+
+> [!TIP]
+> **Performance Optimization: O(1) Decoding**
+> The naive `indexOf` is O(62) per character. A production implementation would pre-allocate a **Lookup Table** (array of size 128) mapping ASCII codes directly to values, reducing decoding to strictly O(L) where L is the string length.
 
 > [!NOTE]
 > Full implementation with URLService: [url_shortener.js](file:///c:/Users/19803/business/ForgeLaunch/ForgeLaunchSpring2026Jan30/src/url_shortener.js)

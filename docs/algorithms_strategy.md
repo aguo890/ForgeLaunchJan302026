@@ -68,7 +68,8 @@ const shuffleArray = (() => {
         (typeof require === 'function' ? require('crypto').webcrypto : undefined);
     const useCrypto = !!(cryptoLib && cryptoLib.getRandomValues);
 
-    return (array) => {
+    // 1. Define the named function for internal reference
+    const shuffleFn = (array) => {
         if (!Array.isArray(array)) throw new TypeError("Input must be an array.");
         const len = array.length;
         if (len <= 1) return array;
@@ -103,12 +104,13 @@ const shuffleArray = (() => {
         return array;
     };
 
-    // Attach reset method for deterministic testing
+    // 2. Attach reset method for deterministic testing
     shuffleFn._resetEntropy = () => {
         sharedCursor = BUFFER_SIZE;
         sharedRandomBuffer = null;
     };
 
+    // 3. Return the named function
     return shuffleFn;
 })();
 ```
