@@ -52,10 +52,7 @@ PART A: ALGORITHMS (Group A)
 
 /**
  * Randomly reorders (shuffles) an array in-place using Fisher-Yates with Rejection Sampling.
- * Uses crypto.getRandomValues for unbiased, secure distribution if available.
- * * COMPLEXITY:
- * - Time: O(N)
- * - Space: O(N) (Auxiliary buffer for entropy)
+ * Handles entropy generation in chunks to avoid QuotaExceededError on large arrays.
  * * @param {Array} array - The array to shuffle.
  * @returns {Array} - The mutated array.
  */
@@ -69,13 +66,21 @@ const shuffleArray = (array) => {
     let randomValues = null;
     let cursor = 0;
 
-    // Initialize buffer if using crypto
+    const safeRandomFill = (buffer) => {
+        const MAX_BYTES = 65536;
+        const BYTES_PER_ELEMENT = 4;
+        const CHUNK_SIZE = MAX_BYTES / BYTES_PER_ELEMENT;
+
+        for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
+            const end = Math.min(i + CHUNK_SIZE, buffer.length);
+            crypto.getRandomValues(buffer.subarray(i, end));
+        }
+    };
+
     if (useCrypto) {
-        // Allocate a buffer slightly larger than len to account for rejections.
-        // In the extreme rare case we run out, we'll refill.
         const bufferSize = len + Math.ceil(len * 0.1) + 16;
         randomValues = new Uint32Array(bufferSize);
-        crypto.getRandomValues(randomValues);
+        safeRandomFill(randomValues);
     }
 
     const MAX_UINT32 = 0xFFFFFFFF;
@@ -86,12 +91,11 @@ const shuffleArray = (array) => {
         if (useCrypto) {
             const range = i + 1;
             const threshold = MAX_UINT32 - (MAX_UINT32 % range);
-
             let candidate;
+
             do {
                 if (cursor >= randomValues.length) {
-                    // Refill buffer if exhausted (extremely rare)
-                    crypto.getRandomValues(randomValues);
+                    safeRandomFill(randomValues);
                     cursor = 0;
                 }
                 candidate = randomValues[cursor++];
@@ -99,7 +103,6 @@ const shuffleArray = (array) => {
 
             j = candidate % range;
         } else {
-            // Fallback for older environments
             j = Math.floor(Math.random() * (i + 1));
         }
 
@@ -109,33 +112,34 @@ const shuffleArray = (array) => {
 };
 
 /**
- * Detects if a value is a 0-9 pandigital number using Bitwise operations.
+ * Detects if a value is a 0-9 pandigital number using a Bitmask Strategy.
  * * ALGORITHMIC STRATEGY:
- * Uses a bitmask to track seen digits. This allows for O(1) Space complexity
- * (a single integer) compared to O(N) Space for a Set or Array.
- * * COMPLEXITY:
- * - Time: O(N) where N is the number of digits.
- * - Space: O(1) - Constant space usage (single integer variable).
+ * Utilizes a 32-bit integer as a bitmask to track seen digits. This achieves
+ * O(1) Space complexity and extremely low constant factors in time.
+ * * PRECISION HANDLING:
+ * Large integers are converted to strings to avoid IEEE 754 precision loss.
  * * @param {string|number} input - The value to check.
  * @returns {boolean}
  */
 const isPandigital = (input) => {
     if (input == null) return false;
 
-    // Fast path: Number checks
+    // Fast path: If it's a number, ensure it's not scientific notation 
+    // which distorts the "digits" concept (e.g., 1e21).
     if (typeof input === 'number') {
-        if (input < 1023456789) return false; // Minimum 0-9 pandigital
-        if (input > 9876543210) return false; // Maximum 0-9 pandigital
-        // Note: The integer check implies length 10 automatically within this range
-        
+        // Optimization: Small numbers cannot be pandigital (must be > 1 billion)
+        if (input < 1023456789) return false;
+
+        // Convert to string to handle the digits safely
         const strVal = String(input);
         if (strVal.includes('e')) return false;
+
+        // Pass to the logic below
         return checkStringBitmask(strVal);
     }
 
     const str = String(input);
-    // STRICTNESS CHECK: A pure 0-9 pandigital must be exactly 10 digits.
-    if (str.length !== 10) return false; 
+    if (str.length < 10) return false;
 
     return checkStringBitmask(str);
 };

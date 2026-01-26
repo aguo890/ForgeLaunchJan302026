@@ -81,32 +81,59 @@ We can leverage ES6 Destructuring Assignment to perform the swap operation in a 
  * * @param {Array} array - The array to be shuffled.
  * @returns {Array} - The mutated, shuffled array.
  */
+/**
+ * Randomly reorders (shuffles) an array in-place using Fisher-Yates with Rejection Sampling.
+ * Handles entropy generation in chunks to avoid QuotaExceededError on large arrays.
+ * * @param {Array} array - The array to shuffle.
+ * @returns {Array} - The mutated array.
+ */
 const shuffleArray = (array) => {
   if (!Array.isArray(array)) throw new TypeError("Input must be an array.");
 
   const len = array.length;
   if (len <= 1) return array;
 
-  // Optimization: Batch the random value generation to avoid 
-  // N system calls and N allocations inside the loop.
-  let randomValues = null;
   const useCrypto = typeof crypto !== 'undefined' && crypto.getRandomValues;
+  let randomValues = null;
+  let cursor = 0;
+
+  const safeRandomFill = (buffer) => {
+    const MAX_BYTES = 65536;
+    const BYTES_PER_ELEMENT = 4;
+    const CHUNK_SIZE = MAX_BYTES / BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
+      const end = Math.min(i + CHUNK_SIZE, buffer.length);
+      crypto.getRandomValues(buffer.subarray(i, end));
+    }
+  };
 
   if (useCrypto) {
-    randomValues = new Uint32Array(len);
-    crypto.getRandomValues(randomValues);
+    const bufferSize = len + Math.ceil(len * 0.1) + 16;
+    randomValues = new Uint32Array(bufferSize);
+    safeRandomFill(randomValues);
   }
+
+  const MAX_UINT32 = 0xFFFFFFFF;
 
   for (let i = len - 1; i > 0; i--) {
     let j;
 
     if (useCrypto) {
-      // Use the pre-generated random value for this iteration.
-      // Scale strict 32-bit int to range [0, i].
-      // Note: Modulo bias is technically present but negligible for this project scope.
-      j = randomValues[i] % (i + 1);
+      const range = i + 1;
+      const threshold = MAX_UINT32 - (MAX_UINT32 % range);
+      let candidate;
+
+      do {
+        if (cursor >= randomValues.length) {
+          safeRandomFill(randomValues);
+          cursor = 0;
+        }
+        candidate = randomValues[cursor++];
+      } while (candidate >= threshold);
+
+      j = candidate % range;
     } else {
-      // Fallback for older environments
       j = Math.floor(Math.random() * (i + 1));
     }
 
@@ -117,7 +144,9 @@ const shuffleArray = (array) => {
 ```
 
 ### 3.4 Deep Insight: Performance & Security Balance
-By implementing Fisher-Yates, we ensure mathematical correctness. However, a naive implementation of `crypto.getRandomValues` inside a loop would be a performance disaster due to system call overhead. This solution demonstrates "Staff-level" awareness by **batching entropy generation**: we allocate a single `Uint32Array` and fetch all required random bits in one operation (1 system call) rather than fetching them per iteration (N system calls). This balances cryptographic strength with high-performance execution.
+By implementing Fisher-Yates, we ensure mathematical correctness. However, a naive implementation of `crypto.getRandomValues` inside a loop would be a performance disaster due to system call overhead. This solution demonstrates "Staff-level" awareness by **batching entropy generation**: we allocate a `Uint32Array` and fetch required random bits in bulk.
+
+**Quota Management:** To ensure reliability across environments (like Chrome or Node.js) that impose a 65,536-byte limit on `getRandomValues`, we implement **Chunked Filling**. The buffer is filled in safe batches of 16,384 elements, preventing `QuotaExceededError` on large arrays while maintaining the efficiency of batched system calls.
 
 ---
 

@@ -12,6 +12,7 @@
  * - CORRECTNESS: Implements Fisher-Yates with Crypto.getRandomValues for cryptographic strength.
  * - STATISTICAL INTEGRITY: Uses Rejection Sampling to eliminate modulo bias, ensuring perfect uniformity.
  * - EFFICIENCY: Batches entropy generation to minimize system call overhead.
+ * - VERIFICATION: This change should trigger a documentation update in the strategy file.
  */
 
 /**
@@ -33,13 +34,29 @@ const shuffleArray = (array) => {
     let randomValues = null;
     let cursor = 0;
 
+    /**
+     * Fills a Uint32Array with random values in chunks to stay within 
+     * the Web Crypto API's 65,536-byte limit per call.
+     * @param {Uint32Array} buffer - The buffer to fill.
+     */
+    const safeRandomFill = (buffer) => {
+        const MAX_BYTES = 65536;
+        const BYTES_PER_ELEMENT = 4; // Uint32Array
+        const CHUNK_SIZE = MAX_BYTES / BYTES_PER_ELEMENT; // 16384
+
+        for (let i = 0; i < buffer.length; i += CHUNK_SIZE) {
+            const end = Math.min(i + CHUNK_SIZE, buffer.length);
+            const view = buffer.subarray(i, end);
+            crypto.getRandomValues(view);
+        }
+    };
+
     // Initialize buffer if using crypto
     if (useCrypto) {
         // Allocate a buffer slightly larger than len to account for rejections.
-        // In the extreme rare case we run out, we'll refill.
         const bufferSize = len + Math.ceil(len * 0.1) + 16;
         randomValues = new Uint32Array(bufferSize);
-        crypto.getRandomValues(randomValues);
+        safeRandomFill(randomValues);
     }
 
     const MAX_UINT32 = 0xFFFFFFFF;
@@ -54,8 +71,8 @@ const shuffleArray = (array) => {
             let candidate;
             do {
                 if (cursor >= randomValues.length) {
-                    // Refill buffer if exhausted (extremely rare)
-                    crypto.getRandomValues(randomValues);
+                    // Refill buffer in chunks if exhausted
+                    safeRandomFill(randomValues);
                     cursor = 0;
                 }
                 candidate = randomValues[cursor++];
@@ -73,13 +90,16 @@ const shuffleArray = (array) => {
 };
 
 /**
- * Detects if a value is a 0-9 pandigital number using Bitwise operations.
+ * Detects if a value is a 0-9 pandigital number using a Bitmask Strategy.
  * * ALGORITHMIC STRATEGY:
- * Uses a bitmask to track seen digits. This allows for O(1) Space complexity
- * (a single integer) compared to O(N) Space for a Set or Array.
+ * Utilizes a 32-bit integer as a bitmask to track seen digits. This achieves
+ * O(1) Space complexity and extremely low constant factors in time.
+ * * PRECISION HANDLING:
+ * Large integers are converted to strings to avoid IEEE 754 precision loss
+ * (which occurs beyond 2^53 - 1).
  * * COMPLEXITY:
  * - Time: O(N) where N is the number of digits.
- * - Space: O(1) - Constant space usage (single integer variable).
+ * - Space: O(1) - Constant space usage (single 32-bit integer).
  * * @param {string|number} input - The value to check.
  * @returns {boolean}
  */

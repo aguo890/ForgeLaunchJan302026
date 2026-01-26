@@ -38,6 +38,21 @@ describe('shuffleArray', () => {
         shuffleArray(single);
         assert.deepStrictEqual(single, [1]);
     });
+
+    it('should handle large arrays without throwing QuotaExceededError', () => {
+        // 65536 bytes / 4 bytes per Int = 16384 elements.
+        // We test 20,000 to exceed the single-call limit of the Web Crypto API.
+        const size = 20000;
+        const largeArray = Array.from({ length: size }, (_, i) => i);
+
+        // This will crash if chunking is not implemented
+        assert.doesNotThrow(() => shuffleArray(largeArray));
+
+        // Basic verification that data is still there
+        assert.strictEqual(largeArray.length, size);
+        // Unlikely to be same as original order
+        assert.notDeepStrictEqual(largeArray, Array.from({ length: size }, (_, i) => i));
+    });
 });
 
 describe('isPandigital', () => {

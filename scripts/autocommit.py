@@ -9,6 +9,10 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).parent
 ROOT_DIR = SCRIPT_DIR.parent
 DEVLOG_FILE = ROOT_DIR / "docs" / "development_log.md"  # <--- New Log File Path
+DOCS_MAPPING = {
+    "docs/algorithms_strategy.md": ["src/algorithms.js", "test/algorithms.test.js"],
+    "docs/system_design_strategy.md": ["src/system_design.js", "test/system_design.test.js"],
+}
 
 try:
     from dotenv import load_dotenv
@@ -184,6 +188,91 @@ def run_verification():
         print("ℹ️  No verification script found (scripts/verify_submission.js). Skipping.")
         return None
 
+def update_documentation_files(client, staged_files_list):
+    """Updates documentation files based on changes in their mapped source/test files."""
+    updated_any = False
+    
+    for doc_rel_path, dependencies in DOCS_MAPPING.items():
+        doc_path = ROOT_DIR / doc_rel_path
+        if not doc_path.exists():
+            continue
+            
+        # Check if any dependency is in staged files
+        # We only trigger if .js or .test.js files are staged, avoiding feedback loops
+        trigger_files = [f for f in staged_files_list if any(f.endswith(dep) for dep in dependencies)]
+        
+        if not trigger_files:
+            continue
+            
+        print(f"📄 dependency change detected for {doc_rel_path}. Updating documentation...")
+        
+        try:
+            current_doc_content = doc_path.read_text(encoding="utf-8")
+            
+            # For simplicity, we use the first source file as primary context if multiple exist, 
+            # or we could concatenate. Let's concatenate primary source files for context.
+            source_contexts = []
+            for dep in dependencies:
+                dep_path = ROOT_DIR / dep
+                if dep_path.exists() and dep.endswith(".js"):
+                    source_contexts.append(f"--- FILE: {dep} ---\n{dep_path.read_text(encoding='utf-8')}")
+            
+            source_context_str = "\n\n".join(source_contexts)
+            
+            system_prompt = (
+                "You are a technical writer maintaining strategy documentation for a software project. "
+                "Your goal is to keep the documentation consistent with the latest source code."
+            )
+            
+            user_prompt = f"""
+You are a Technical Writer maintaining a Strategy Document.
+
+SOURCE CODE CONTEXT:
+{source_context_str}
+
+CURRENT DOCUMENTATION:
+{current_doc_content}
+
+TASK:
+Update the CURRENT DOCUMENTATION to match the SOURCE CODE.
+
+STRICT RULES:
+1. PRESERVE the existing headers, tone, and 'Executive Summary'.
+2. ONLY update sections where the logic/algorithm has actually changed.
+3. IF complexities changed (e.g., O(N) to O(1)), update the 'Complexity' section.
+4. Do NOT rewrite the entire file if not needed; output the fully updated markdown file.
+5. Ensure the tone remains professional and academic as in the original.
+"""
+
+            response = client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.2,
+            )
+            
+            new_doc_content = response.choices[0].message.content.strip()
+            
+            # Safety Check: Prevent wiping the file or massive hallucinations
+            if len(new_doc_content) < len(current_doc_content) * 0.5:
+                print(f"⚠️  AI generated documentation for {doc_rel_path} is suspiciously short. Skipping update.")
+                continue
+                
+            if new_doc_content != current_doc_content:
+                doc_path.write_text(new_doc_content, encoding="utf-8")
+                subprocess.run(["git", "add", str(doc_path)], cwd=ROOT_DIR)
+                print(f"✅ Updated and staged {doc_rel_path}")
+                updated_any = True
+            else:
+                print(f"ℹ️  No changes needed for {doc_rel_path}")
+                
+        except Exception as e:
+            print(f"⚠️  Failed to update {doc_rel_path}: {e}")
+            
+    return updated_any
+
 def main():
     api_key = os.getenv("DEEPSEEK_API_KEY") # Or OPENAI_API_KEY
     
@@ -203,6 +292,7 @@ def main():
     
     diff = get_staged_diff()
     files = get_staged_files()
+    staged_files_list = [f.strip() for f in files.splitlines() if f.strip()]
     
     if not diff.strip():
         print("No changes to commit.")
@@ -216,7 +306,16 @@ def main():
         # Adjust base_url/model if using a different provider
         client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
-        # 2. Generate and Write Dev Log (Only if there are changes)
+        # 2. Update Documentation (if applicable)
+        docs_updated = update_documentation_files(client, staged_files_list)
+        
+        # If docs were updated, refresh diff/files
+        if docs_updated:
+            diff = get_staged_diff()
+            files = get_staged_files()
+            staged_files_list = [f.strip() for f in files.splitlines() if f.strip()]
+
+        # 3. Generate and Write Dev Log (Only if there are changes)
         # We pass the diff *before* the log update so the log reflects the actual work
         generate_devlog_entry(client, diff, files)
 
@@ -240,8 +339,8 @@ def main():
     
     try:
         subprocess.run(["git", "commit", "-m", commit_msg], cwd=ROOT_DIR, check=True)
-        subprocess.run(["git", "push"], cwd=ROOT_DIR, check=True)
-        print("✅ Pushed!")
+        # subprocess.run(["git", "push"], cwd=ROOT_DIR, check=True)
+        print("✅ Committed (Push skipped for test)!")
     except subprocess.CalledProcessError:
         print("❌ Failed to commit/push.")
         sys.exit(1)
