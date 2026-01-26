@@ -105,3 +105,8 @@
 *   Updated all corresponding test cases to use the returned ID for subsequent operations (edit, delete), ensuring consistency with the new method signature.
 *   Refined the error message in the `TodoList.reorganize()` method for out-of-bounds indices to be more descriptive.
 *   Added a `test_output.txt` file to capture the results of the test suite execution, which shows one test failure related to the updated error message regex.
+
+## [2026-01-26 04:46]
+*   **Enhanced Encapsulation in TodoList:** Modified the `add` method to return only the task's ID instead of the entire task object, strengthening data privacy and preventing unintended external manipulation of internal task data.
+*   **Updated Mock Data Injection:** Refactored the demonstration code to capture and use the returned task IDs for subsequent operations (`edit`, `delete`), ensuring the example correctly follows the new encapsulation principle.
+*   **Improved Code Clarity:** Added `[MOCK]` prefixes to task titles in the demonstration for better distinction and updated console log messages to explicitly reference the task IDs being used.

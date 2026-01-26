@@ -266,7 +266,7 @@ class TodoList {
   add(title, description, dueDate) {
     const newTask = new Task(title, description, dueDate);
     this.tasks.push(newTask);
-    return newTask;
+    return newTask.id; // SECURITY UPDATE: Return ID only (Encapsulation)
   }
 
   delete(id) {
@@ -302,26 +302,25 @@ class TodoList {
 const myTracker = new TodoList();
 
 // --- MOCK DATA INJECTION ---
-// Simulating initial state for demonstration purposes
 console.log("Action: Injecting Mock Data...");
-myTracker.add("Finish Forge Challenge", "Complete code and essays", "2026-01-30");
-myTracker.add("Buy Groceries", "Milk, Coffee, Bread", "2026-02-01");
-myTracker.add("Call Mentor", "Discuss internship goals", "2026-01-28");
+// Capture the returned IDs (Strings), NOT the objects, to preserve encapsulation.
+const t1Id = myTracker.add("[MOCK] Finish Forge Challenge", "Complete code and essays", "2026-01-30");
+const t2Id = myTracker.add("[MOCK] Buy Groceries", "Milk, Coffee, Bread", "2026-02-01");
+const t3Id = myTracker.add("[MOCK] Call Mentor", "Discuss internship goals", "2026-01-28");
 
 myTracker.printState();
 
-console.log("Action: Completing 'Call Mentor'...");
-// Assuming 'Call Mentor' is ID 3 (since it was added 3rd)
-myTracker.edit(3, { status: TaskStatus.DONE });
+console.log(`Action: Completing 'Call Mentor' (ID: ${t3Id})...`);
+myTracker.edit(t3Id, { status: TaskStatus.DONE });
 
 console.log("Action: Reorganizing 'Buy Groceries' to the top...");
-// 'Buy Groceries' is at index 1. Moving to index 0.
+// Reorganize uses Array Indices, so this remains (1 -> 0)
 myTracker.reorganize(1, 0);
 
 myTracker.printState();
 
-console.log("Action: Deleting 'Finish Forge Challenge' (ID 1)...");
-myTracker.delete(1);
+console.log(`Action: Deleting 'Finish Forge Challenge' (ID: ${t1Id})...`);
+myTracker.delete(t1Id);
 
 myTracker.printState();
 ```
