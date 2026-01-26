@@ -35,6 +35,8 @@ Running 60000 iterations on [1, 2, 3]...
 
 ALL SYSTEMS OPERATIONAL.
 
+[Artifact] Written to docs/test_summary.json
+
 
 STDERR:
 [System] Invalid status attempt: 'INVALID_STATUS'

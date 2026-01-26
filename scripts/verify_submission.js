@@ -1,12 +1,20 @@
 /**
  * verify_submission.js
- * * PURPOSE:
+ * PURPOSE:
  * This script serves as a localized Continuous Integration (CI) test suite.
  * It strictly validates the algorithms and system design code intended for the 
  * Forge Launch submission.
- * * TO RUN:
+ * 
+ * OUTPUTS:
+ * - Console logs for human readability
+ * - docs/test_summary.json for structured artifact consumption
+ * 
+ * TO RUN:
  * node verify_submission.js
  */
+
+const fs = require('fs');
+const path = require('path');
 
 const colors = {
     reset: "\x1b[0m",
@@ -19,6 +27,37 @@ const colors = {
 const logPass = (msg) => console.log(`${colors.green}✔ PASS:${colors.reset} ${msg}`);
 const logFail = (msg) => console.error(`${colors.red}✘ FAIL:${colors.reset} ${msg}`);
 const logHeader = (msg) => console.log(`\n${colors.blue}=== ${msg} ===${colors.reset}`);
+
+// ==========================================
+// TEST ARTIFACT: Structured result accumulator
+// ==========================================
+const testArtifact = {
+    timestamp: new Date().toISOString(),
+    overall_status: "PASS",
+    tests: {},
+    meta: {
+        engine: `Node ${process.version}`,
+        execution_start: Date.now()
+    }
+};
+
+// Helper to record test results
+function recordTest(category, testName, passed, meta = {}) {
+    if (!testArtifact.tests[category]) {
+        testArtifact.tests[category] = { status: "PASS", checks: [] };
+    }
+
+    testArtifact.tests[category].checks.push({
+        name: testName,
+        status: passed ? "PASS" : "FAIL",
+        ...meta
+    });
+
+    if (!passed) {
+        testArtifact.tests[category].status = "FAIL";
+        testArtifact.overall_status = "FAIL";
+    }
+}
 
 // ==========================================
 // SECTION 1: CODE IMPLEMENTATIONS
@@ -148,6 +187,7 @@ function verifyShuffle() {
     logHeader("Testing A1: Fisher-Yates Shuffle");
 
     const iterations = 60000;
+    const tolerance_percent = 2;
     const counts = {};
 
     // We shuffle [1, 2, 3]. There are 3! = 6 permutations.
@@ -162,7 +202,7 @@ function verifyShuffle() {
     }
 
     const expected = iterations / 6;
-    const tolerance = iterations * 0.02; // Allow 2% deviation
+    const tolerance = iterations * (tolerance_percent / 100);
 
     let passed = true;
     for (const [perm, count] of Object.entries(counts)) {
@@ -174,6 +214,18 @@ function verifyShuffle() {
     }
 
     if (passed) logPass("Distribution is statistically uniform (Unbiased).");
+
+    // Record to artifact
+    recordTest("fisher_yates", "Statistical Distribution", passed, {
+        iterations: iterations,
+        tolerance_percent: tolerance_percent,
+        permutation_counts: counts,
+        comment: passed ? "Statistically uniform" : "Distribution biased"
+    });
+
+    // Add summary metadata
+    testArtifact.tests.fisher_yates.iterations = iterations;
+    testArtifact.tests.fisher_yates.tolerance_percent = tolerance_percent;
 }
 
 function verifyPandigital() {
@@ -182,7 +234,7 @@ function verifyPandigital() {
     const cases = [
         { val: "1023456789", expect: true, name: "Standard 0-9 String" },
         { val: 1023456789, expect: true, name: "Standard 0-9 Number" },
-        { val: "11223344556677889900", expect: true, name: "Long w/ Duplicates" }, // Logic Check: Contains all digits
+        { val: "11223344556677889900", expect: true, name: "Long w/ Duplicates" },
         { val: "123456789", expect: false, name: "Missing Zero" },
         { val: "ABCDEFGHIJ", expect: false, name: "Non-Digits" },
         { val: 123, expect: false, name: "Short Number" }
@@ -190,69 +242,109 @@ function verifyPandigital() {
 
     cases.forEach(c => {
         const result = isPandigital(c.val);
-        if (result === c.expect) {
+        const passed = (result === c.expect);
+
+        if (passed) {
             logPass(`Case [${c.name}]: Got ${result}`);
         } else {
             logFail(`Case [${c.name}]: Expected ${c.expect}, Got ${result}`);
         }
+
+        // Record to artifact
+        recordTest("pandigital", c.name, passed, {
+            input: String(c.val),
+            expected: c.expect,
+            actual: result
+        });
     });
+
+    // Add summary metadata
+    testArtifact.tests.pandigital.total_cases = cases.length;
 }
 
 function verifyTodoList() {
     logHeader("Testing B1: TodoList Architecture");
 
     const list = new TodoList();
+    const checksPerformed = [];
 
     // 1. ADD & SANITIZATION
     const t1 = list.add(" Task 1 ", "Desc ", "2026-01-01"); // Note spaces
     const t2 = list.add("Task 2", "Desc", "2026-01-02");
     const t3 = list.add("Task 3", "Desc", "2026-01-03");
 
-    if (list.tasks.length === 3) logPass("Add: Count is 3");
+    let passed = (list.tasks.length === 3);
+    if (passed) logPass("Add: Count is 3");
     else logFail(`Add: Count is ${list.tasks.length}`);
+    recordTest("todo_list", "Add", passed, { task_count: list.tasks.length });
+    checksPerformed.push("Add");
 
     // Check Sanitization (Trim)
-    if (t1.title === "Task 1") logPass("Input Sanitization: Title trimmed");
+    passed = (t1.title === "Task 1");
+    if (passed) logPass("Input Sanitization: Title trimmed");
     else logFail(`Input Sanitization: Title is '${t1.title}'`);
+    recordTest("todo_list", "Sanitization", passed);
+    checksPerformed.push("Sanitization");
 
     // Check UUID
-    if (typeof t1.id === 'string' && t1.id.startsWith('_')) {
-        logPass("UUID: Generated correctly");
-    } else {
-        logFail(`UUID: Invalid format ${t1.id}`);
-    }
+    passed = (typeof t1.id === 'string' && t1.id.startsWith('_'));
+    if (passed) logPass("UUID: Generated correctly");
+    else logFail(`UUID: Invalid format ${t1.id}`);
+    recordTest("todo_list", "UUID", passed);
+    checksPerformed.push("UUID");
 
     // 2. EDIT & VALIDATION
     list.edit(t1.id, { status: 'INVALID_STATUS' });
-    if (t1.status === TaskStatus.TODO) {
-        logPass("Validation: Invalid status rejected");
-    } else {
-        logFail("Validation: Invalid status accepted");
-    }
+    passed = (t1.status === TaskStatus.TODO);
+    if (passed) logPass("Validation: Invalid status rejected");
+    else logFail("Validation: Invalid status accepted");
+    recordTest("todo_list", "State Guard", passed);
+    checksPerformed.push("State Guard");
 
     list.edit(t1.id, { status: TaskStatus.DONE, title: "Updated Task 1" });
-    if (list.tasks[0].status === 'Done') {
-        logPass("Edit: Valid status updated");
-    } else {
-        logFail("Edit: Update failed");
-    }
+    passed = (list.tasks[0].status === 'Done');
+    if (passed) logPass("Edit: Valid status updated");
+    else logFail("Edit: Update failed");
+    recordTest("todo_list", "Edit", passed);
+    checksPerformed.push("Edit");
 
     // 3. REORGANIZE
     // Move Task 3 (index 2) to top (index 0)
     list.reorganize(2, 0);
-
-    if (list.tasks[0].id === t3.id && list.tasks[1].id === t1.id) {
-        logPass("Reorganize: Task 3 moved to head");
-    } else {
-        logFail("Reorganize: Order incorrect");
-    }
+    passed = (list.tasks[0].id === t3.id && list.tasks[1].id === t1.id);
+    if (passed) logPass("Reorganize: Task 3 moved to head");
+    else logFail("Reorganize: Order incorrect");
+    recordTest("todo_list", "Reorganize", passed);
+    checksPerformed.push("Reorganize");
 
     // 4. DELETE
     list.delete(t2.id);
-    if (list.tasks.length === 2 && !list.tasks.find(t => t.id === t2.id)) {
-        logPass("Delete: Removed correctly");
-    } else {
-        logFail("Delete: Failed");
+    passed = (list.tasks.length === 2 && !list.tasks.find(t => t.id === t2.id));
+    if (passed) logPass("Delete: Removed correctly");
+    else logFail("Delete: Failed");
+    recordTest("todo_list", "Delete", passed, { final_count: list.tasks.length });
+    checksPerformed.push("Delete");
+
+    // Add summary metadata
+    testArtifact.tests.todo_list.checks_performed = checksPerformed;
+    testArtifact.tests.todo_list.final_task_count = list.tasks.length;
+}
+
+// ==========================================
+// ARTIFACT WRITER
+// ==========================================
+
+function writeArtifact() {
+    testArtifact.meta.execution_time_ms = Date.now() - testArtifact.meta.execution_start;
+    delete testArtifact.meta.execution_start; // Clean up internal field
+
+    const artifactPath = path.join(__dirname, '..', 'docs', 'test_summary.json');
+
+    try {
+        fs.writeFileSync(artifactPath, JSON.stringify(testArtifact, null, 2));
+        console.log(`\n${colors.blue}[Artifact] Written to docs/test_summary.json${colors.reset}`);
+    } catch (e) {
+        console.error(`${colors.red}[Artifact] Failed to write: ${e.message}${colors.reset}`);
     }
 }
 
@@ -262,12 +354,29 @@ function verifyTodoList() {
 
 (function runAll() {
     console.log(`${colors.yellow}STARTING VERIFICATION...${colors.reset}`);
+
+    let exitCode = 0;
+
     try {
         verifyShuffle();
         verifyPandigital();
         verifyTodoList();
-        console.log(`\n${colors.green}ALL SYSTEMS OPERATIONAL.${colors.reset}`);
+
+        if (testArtifact.overall_status === "PASS") {
+            console.log(`\n${colors.green}ALL SYSTEMS OPERATIONAL.${colors.reset}`);
+        } else {
+            console.log(`\n${colors.red}SOME TESTS FAILED.${colors.reset}`);
+            exitCode = 1;
+        }
     } catch (e) {
         console.error(`\n${colors.red}CRITICAL ERROR:${colors.reset}`, e);
+        testArtifact.overall_status = "FAIL";
+        testArtifact.critical_error = e.message;
+        exitCode = 1;
     }
+
+    // Always write artifact, even on failure
+    writeArtifact();
+
+    process.exit(exitCode);
 })();

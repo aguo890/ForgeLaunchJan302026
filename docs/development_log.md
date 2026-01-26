@@ -359,3 +359,42 @@ Implemented a comprehensive refactor with three key changes:
 - **Maintainability**: Regex patterns are more self-documenting than positional string arithmetic
 
 **Minor fixes**:
+
+## [2026-01-26 18:15] Enhanced Test Framework with Structured Artifact Generation
+
+### Context/Problem
+The verification script (`verify_submission.js`) produced only console output, making it difficult to programmatically consume test results. This limited integration with CI/CD pipelines and prevented automated reporting systems from easily parsing test outcomes.
+
+### Solution/Implementation
+Implemented a **structured test artifact system** that generates a JSON report (`docs/test_summary.json`) alongside console output. Key changes:
+
+1. **Added test result accumulator**: Created `testArtifact` object with timestamp, overall status, and nested test results
+2. **Implemented recording helper**: Added `recordTest()` function to capture test outcomes with metadata
+3. **Enhanced test functions**: Modified `verifyShuffle()`, `verifyPandigital()`, and `verifyTodoList()` to record results to the artifact
+4. **Added artifact writer**: Created `writeArtifact()` function that serializes results to JSON file
+5. **Updated exit handling**: Added proper exit codes (0 for PASS, 1 for FAIL) and ensured artifact is written even on test failures
+
+### Rationale/Logic
+The **dual-output approach** (console + JSON) provides both human-readable feedback and machine-readable data. This follows the **separation of concerns** principle:
+
+- **Console output**: For immediate developer feedback during local execution
+- **JSON artifact**: For integration with CI/CD systems, dashboards, or automated reporting tools
+
+The **immutable artifact** approach ensures test results are preserved even if the process exits with an error. The JSON structure includes:
+- **Statistical metadata** (iteration counts, tolerance percentages)
+- **Detailed test cases** with inputs, expected/actual values
+- **Execution metadata** (timestamp, Node version, runtime)
+
+This enables **historical analysis** and **trend tracking** of test performance over time.
+
+### Outcome
+The system now produces both console output and a structured JSON artifact. Verification confirmed:
+- All existing tests continue to pass
+- JSON file is correctly written to `docs/test_summary.json`
+- Exit codes properly reflect test status (0 for PASS, 1 for FAIL)
+- Artifact includes comprehensive metadata for all test categories
+
+**Minor improvements:**
+- Updated documentation comments to reflect new artifact output
+- Added color-coded artifact write confirmation to console
+- Cleaned up internal timing field from final JSON output

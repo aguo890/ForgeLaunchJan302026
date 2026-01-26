@@ -1,0 +1,125 @@
+{
+  "timestamp": "2026-01-26T23:15:21.469Z",
+  "overall_status": "PASS",
+  "tests": {
+    "fisher_yates": {
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "Statistical Distribution",
+          "status": "PASS",
+          "iterations": 60000,
+          "tolerance_percent": 2,
+          "permutation_counts": {
+            "123": 10070,
+            "132": 9845,
+            "213": 10030,
+            "231": 10026,
+            "312": 10063,
+            "321": 9966
+          },
+          "comment": "Statistically uniform"
+        }
+      ],
+      "iterations": 60000,
+      "tolerance_percent": 2
+    },
+    "pandigital": {
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "Standard 0-9 String",
+          "status": "PASS",
+          "input": "1023456789",
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "Standard 0-9 Number",
+          "status": "PASS",
+          "input": "1023456789",
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "Long w/ Duplicates",
+          "status": "PASS",
+          "input": "11223344556677889900",
+          "expected": true,
+          "actual": true
+        },
+        {
+          "name": "Missing Zero",
+          "status": "PASS",
+          "input": "123456789",
+          "expected": false,
+          "actual": false
+        },
+        {
+          "name": "Non-Digits",
+          "status": "PASS",
+          "input": "ABCDEFGHIJ",
+          "expected": false,
+          "actual": false
+        },
+        {
+          "name": "Short Number",
+          "status": "PASS",
+          "input": "123",
+          "expected": false,
+          "actual": false
+        }
+      ],
+      "total_cases": 6
+    },
+    "todo_list": {
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "Add",
+          "status": "PASS",
+          "task_count": 3
+        },
+        {
+          "name": "Sanitization",
+          "status": "PASS"
+        },
+        {
+          "name": "UUID",
+          "status": "PASS"
+        },
+        {
+          "name": "State Guard",
+          "status": "PASS"
+        },
+        {
+          "name": "Edit",
+          "status": "PASS"
+        },
+        {
+          "name": "Reorganize",
+          "status": "PASS"
+        },
+        {
+          "name": "Delete",
+          "status": "PASS",
+          "final_count": 2
+        }
+      ],
+      "checks_performed": [
+        "Add",
+        "Sanitization",
+        "UUID",
+        "State Guard",
+        "Edit",
+        "Reorganize",
+        "Delete"
+      ],
+      "final_task_count": 2
+    }
+  },
+  "meta": {
+    "engine": "Node v22.17.1",
+    "execution_time_ms": 16
+  }
+}
