@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import datetime
+import re
 from pathlib import Path
 
 # Setup paths
@@ -102,9 +103,98 @@ def generate_commit_message(client, diff, files):
         print(f"⚠️  Generation failed: {e}")
         return "wip: update (generation failed)"
 
+def update_qa_report(log_output):
+    """Updates the QA_REPORT.md file with the new verification log and date."""
+    qa_file = ROOT_DIR / "docs" / "QA_REPORT.md"
+    if not qa_file.exists():
+        print("ℹ️  QA Report not found, skipping update.")
+        return
+
+    try:
+        content = qa_file.read_text(encoding="utf-8")
+        
+        # 1. Update Date
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        content = re.sub(r"\*\*Date:\*\* \d{4}-\d{2}-\d{2}", f"**Date:** {today}", content)
+
+        # 2. Update Log Content
+        # Matches content between ```text and ```
+        # We use a non-greedy match (.*?) with DOTALL (s) flag implied by manual handling or easier logic
+        # Since I can't easily rely on regex flags in simple replace, let's use a robust pattern
+        pattern = r"(```text\n)(.*?)(```)"
+        
+        # We need to act carefully with regex multiline. 
+        # simpler approach: split by markers if regex is tricky without imports, but we can import re.
+        # Let's assume re is imported or we import it inside function if needed, 
+        # but better to add 'import re' at top. 
+        # For now, I will use a logic that doesn't rely on global scope 're' if I missed adding it to imports?
+        # I checked file content, 'import re' is NOT there. I need to add it.
+        
+        # We will do strings replacement for safety if re is not available, 
+        # BUT I will add `import re` in a separate step or just assume I can edit imports.
+        # Wait, I can only edit contiguous blocks.
+        
+        # Let's stick to string finding for safety without re if I can't easily add the import line 
+        # without a large replace. Actually, I can replace the top imports too.
+        # But for this function:
+        start_marker = "```text\n"
+        end_marker = "\n```"
+        start_idx = content.find(start_marker)
+        end_idx = content.find(end_marker, start_idx + len(start_marker))
+        
+        if start_idx != -1 and end_idx != -1:
+            new_content = content[:start_idx + len(start_marker)] + log_output.strip() + content[end_idx:]
+            qa_file.write_text(new_content, encoding="utf-8")
+            print(f"✅ Updated {qa_file.name} with latest verification logs.")
+            return True
+        else:
+            print("⚠️  Could not find code block in QA Report to update.")
+            return False
+
+    except Exception as e:
+        print(f"⚠️  Failed to update QA Report: {e}")
+        return False
+
+def run_verification():
+    """Runs the verification script if it exists and updates QA report."""
+    verify_script = ROOT_DIR / "scripts" / "verify_submission.js"
+    if verify_script.exists():
+        print("🔍 Running verification suite...")
+        try:
+            # Capture output this time
+            result = subprocess.run(
+                ["node", str(verify_script)], 
+                cwd=ROOT_DIR, 
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding='utf-8' # Ensure encoding
+            )
+            print("✅ Verification Passed.")
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            print("❌ Verification FAILED. Aborting commit.")
+            # Print stderr to show why it failed
+            print(e.stderr)
+            print(e.stdout)
+            sys.exit(1)
+    else:
+        print("ℹ️  No verification script found (scripts/verify_submission.js). Skipping.")
+        return None
+
 def main():
     api_key = os.getenv("DEEPSEEK_API_KEY") # Or OPENAI_API_KEY
     
+    # 0. Run Verification
+    verification_output = run_verification()
+    
+    if verification_output:
+        updated = update_qa_report(verification_output)
+        if updated:
+             # Stage the updated QA Report so it is included in the commit
+             qa_file = ROOT_DIR / "docs" / "QA_REPORT.md"
+             subprocess.run(["git", "add", str(qa_file)], cwd=ROOT_DIR)
+
     # 1. Stage initial changes to get the diff
     print("📦 Staging changes...")
     subprocess.run(["git", "add", "."], cwd=ROOT_DIR)
