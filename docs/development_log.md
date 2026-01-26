@@ -110,3 +110,11 @@
 *   **Enhanced Encapsulation in TodoList:** Modified the `add` method to return only the task's ID instead of the entire task object, strengthening data privacy and preventing unintended external manipulation of internal task data.
 *   **Updated Mock Data Injection:** Refactored the demonstration code to capture and use the returned task IDs for subsequent operations (`edit`, `delete`), ensuring the example correctly follows the new encapsulation principle.
 *   **Improved Code Clarity:** Added `[MOCK]` prefixes to task titles in the demonstration for better distinction and updated console log messages to explicitly reference the task IDs being used.
+
+## [2026-01-26 04:53]
+- Enhanced the Makefile with a new `test` target to run all Node.js tests, improving developer workflow.
+- Refactored the `TodoList` class to use a Map for O(1) lookups and an array for order, significantly improving performance for large datasets.
+- Introduced a Data Transfer Object (DTO) pattern via `_toDTO()` to return immutable, frozen objects, preventing external mutation of internal state.
+- Updated `edit()` and `getAll()` methods to leverage the new data structure, ensuring safe data access and maintaining encapsulation.
+- Added a performance benchmark test (`performance_benchmark.test.js`) to validate O(1) lookup efficiency with large datasets.
+- Added a security audit test (`security_audit.test.js`) to verify that returned task objects are immutable and internal state is protected.

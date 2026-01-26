@@ -38,55 +38,83 @@ class Task {
 // 3. Controller: TodoList (Collection Management)
 class TodoList {
     constructor() {
-        this.tasks = [];
-        this._idCounter = 1; // Simple ID generation for this scope
+        this.tasksMap = new Map(); // O(1) Read/Write
+        this.taskOrder = [];       // Maintains Sort Order
+        this._idCounter = 1;
+    }
+
+    /**
+     * Creates an immutable Data Transfer Object (DTO).
+     * Prevents external code from modifying the internal Map state by reference.
+     * @param {Task} task - The internal mutable task instance
+     * @returns {Object} - Frozen DTO
+     */
+    _toDTO(task) {
+        return Object.freeze({
+            id: task.id,
+            description: task.description,
+            status: task.status,
+            createdAt: task.createdAt
+        });
     }
 
     add(description) {
         const id = this._idCounter++;
         const newTask = new Task(id, description);
-        this.tasks.push(newTask);
+
+        // Normalized State: Store by ID, Track Order separately
+        this.tasksMap.set(id, newTask);
+        this.taskOrder.push(id);
+
         return newTask.id;
     }
 
     delete(id) {
-        const initialLength = this.tasks.length;
-        this.tasks = this.tasks.filter(task => task.id !== id);
-        return this.tasks.length < initialLength; // Returns true if deleted
+        const deleted = this.tasksMap.delete(id); // O(1)
+        if (deleted) {
+            // O(N) - Necessary cost to maintain array order without holes
+            this.taskOrder = this.taskOrder.filter(taskId => taskId !== id);
+        }
+        return deleted;
     }
 
     edit(id, newDescription) {
-        const task = this.tasks.find(t => t.id === id);
-        if (!task) {
+        // O(1) Lookup
+        if (!this.tasksMap.has(id)) {
             throw new Error(`Task with ID ${id} not found.`);
         }
+
+        const task = this.tasksMap.get(id);
+
+        // Validation
         if (!newDescription || typeof newDescription !== 'string' || newDescription.trim() === '') {
             throw new Error('New description must be a non-empty string.');
         }
+
         task.description = newDescription.trim();
-        return task;
+
+        // Return Safe DTO
+        return this._toDTO(task);
     }
 
     /**
      * Reorganizes the list by moving a task from one index to another.
-     * Complexity: O(N) due to Array.splice. 
-     * NOTE: While O(N) is acceptable for small user lists, large-scale implementations 
-     * should consider Doubly Linked Lists or Lexicographical Rank Indexing.
      * @param {number} fromIndex 
      * @param {number} toIndex 
      */
     reorganize(fromIndex, toIndex) {
-        if (fromIndex < 0 || fromIndex >= this.tasks.length ||
-            toIndex < 0 || toIndex >= this.tasks.length) {
-            throw new RangeError(`Reorganize failed: Index ${fromIndex} or ${toIndex} is out of bounds (valid: 0..${this.tasks.length - 1}).`);
+        if (fromIndex < 0 || fromIndex >= this.taskOrder.length ||
+            toIndex < 0 || toIndex >= this.taskOrder.length) {
+            throw new RangeError(`Reorganize failed: Index out of bounds.`);
         }
 
-        const [movedTask] = this.tasks.splice(fromIndex, 1);
-        this.tasks.splice(toIndex, 0, movedTask);
+        const [movedId] = this.taskOrder.splice(fromIndex, 1);
+        this.taskOrder.splice(toIndex, 0, movedId);
     }
 
     getAll() {
-        return [...this.tasks]; // Return copy to prevent direct mutation of array reference
+        // Map the ID order to actual DTOs
+        return this.taskOrder.map(id => this._toDTO(this.tasksMap.get(id)));
     }
 }
 

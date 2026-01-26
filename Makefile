@@ -1,4 +1,6 @@
 PYTHON_CMD ?= python
+NODE_CMD ?= node
+
 
 # Argument handler for 'branch'
 ifeq (branch,$(firstword $(MAKECMDGOALS)))
@@ -7,7 +9,8 @@ ifeq (branch,$(firstword $(MAKECMDGOALS)))
   $(eval $(BRANCH_ARGS):;@:)
 endif
 
-.PHONY: push branch
+.PHONY: push branch test
+
 # Push to GitHub (Auto-commit with AI)
 push:
 	@echo "🚀 Running smart push..."
@@ -18,3 +21,8 @@ branch:
 	@echo "🌿 Creating branch: $(BRANCH_ARGS)"
 	@git checkout -b $(BRANCH_ARGS)
 	@git push --set-upstream origin $(BRANCH_ARGS)
+
+# Run all tests
+test:
+	@echo "🧪 Running all tests..."
+	@$(NODE_CMD) --test test/*.test.js
