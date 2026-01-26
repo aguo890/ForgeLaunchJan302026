@@ -26,7 +26,10 @@ Running 60000 iterations on [1, 2, 3]...
 
 === Testing B1: TodoList Architecture ===
 ✔ PASS: Add: Count is 3
-✔ PASS: Edit: Status and Title updated
+✔ PASS: Input Sanitization: Title trimmed
+✔ PASS: UUID: Generated correctly
+✔ PASS: Validation: Invalid status rejected
+✔ PASS: Edit: Valid status updated
 ✔ PASS: Reorganize: Task 3 moved to head
 ✔ PASS: Delete: Removed correctly
 

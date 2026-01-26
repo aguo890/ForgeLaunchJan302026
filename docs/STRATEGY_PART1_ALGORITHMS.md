@@ -45,36 +45,25 @@ We can leverage ES6 Destructuring Assignment to perform the swap operation in a 
 
 ```javascript
 /**
- * Randomly reorders (shuffles) an array in-place using the Fisher-Yates algorithm.
- * 
- * DESIGN RATIONALE:
- * The Fisher-Yates algorithm is selected over naive sort methods (like array.sort(() => Math.random() - 0.5))
- * because naive sorts introduce statistical bias and typically run in O(N log N) time.
- * Fisher-Yates guarantees a uniform distribution of all permutations and operates in O(N) time complexity,
- * making it the optimal choice for unbiased randomization.
- * 
- * TIME COMPLEXITY: O(N) - We iterate through the array exactly once.
- * SPACE COMPLEXITY: O(1) - The shuffle is performed in-place.
- * 
- * @param {Array} array - The array to be shuffled.
+ * Randomly reorders (shuffles) an array in-place using Fisher-Yates.
+ * * COMPLEXITY:
+ * - Time: O(N) - Single pass.
+ * - Space: O(1) - In-place mutation.
+ * * @param {Array} array - The array to be shuffled.
  * @returns {Array} - The mutated, shuffled array.
  */
 const shuffleArray = (array) => {
-  // Defensive check: Ensure input is an array
+  // Defensive Programming: Validate input type
   if (!Array.isArray(array)) {
     throw new TypeError("Input must be an array.");
   }
 
-  // Iterate backwards from the last element to the second element
+  // Iterate backwards to perform swaps
   for (let i = array.length - 1; i > 0; i--) {
-    
-    // Select a random index from 0 to i (inclusive)
-    // Math.random() generates [0, 1), so * (i + 1) scales it to [0, i + 1)
-    // Math.floor() truncates it to an integer in range [0, i]
+    // Pick a random index j such that 0 <= j <= i
     const j = Math.floor(Math.random() * (i + 1));
     
-    // Perform the swap using ES6 Destructuring Assignment.
-    // This syntax [a, b] = [b, a] swaps values without a temp variable.
+    // ES6 Destructuring Swap: Clean, modern syntax
     [array[i], array[j]] = [array[j], array[i]];
   }
   
@@ -104,42 +93,27 @@ The most efficient way to check for the presence of unique items is using a **Ha
 ```javascript
 /**
  * Detects if a given number or string is a 0-9 pandigital number.
- * 
- * DEFINITION:
- * A 0-9 pandigital number is an integer that contains every digit from 0 to 9 
- * at least once. (e.g., 1023456789 is the smallest 0-9 pandigital number).
- * 
- * IMPLEMENTATION STRATEGY:
- * We utilize the JavaScript 'Set' data structure. A Set only stores unique values.
- * By iterating through the string representation of the number and adding each digit 
- * to the Set, we can determine pandigital status by checking if the Set's size is 10.
- * 
- * EDGE CASES HANDLED:
- * - Input types: Handles both Number and String inputs.
- * - Precision: Converts to string immediately to handle large integers safely.
- * - Negative numbers: Filters out non-digit characters (like '-').
- * 
- * @param {number|string} input - The integer or string to check.
+ * * EDGE CASES:
+ * - Floats: '123.456' is treated as a sequence of digits '123456'.
+ * - Large Ints: Handled via String conversion to avoid IEEE 754 precision loss.
+ * - Signs: Negative signs are ignored.
+ * * @param {number|string} input - The integer or string to check.
  * @returns {boolean} - True if the input contains all digits 0-9.
  */
 const isPandigital = (input) => {
-  // Convert input to string to iterate over digits. 
-  // This handles both Number and String inputs robustly.
   const numString = String(input);
-  
-  // Initialize a Set to store unique digits found.
   const uniqueDigits = new Set();
   
-  // Iterate over each character in the string
   for (const char of numString) {
-    // Check if the character is a valid digit '0' through '9'.
-    // This effectively ignores negative signs, decimal points, or whitespace.
+    // Strict char comparison is faster than Regex
     if (char >= '0' && char <= '9') {
       uniqueDigits.add(char);
     }
+    
+    // Optimization: If we already found all 10, we can exit early.
+    if (uniqueDigits.size === 10) return true;
   }
   
-  // A strictly 0-9 pandigital number must contain exactly 10 unique digits.
   return uniqueDigits.size === 10;
 };
 ```

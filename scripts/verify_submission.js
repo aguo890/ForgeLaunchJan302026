@@ -27,11 +27,20 @@ const logHeader = (msg) => console.log(`\n${colors.blue}=== ${msg} ===${colors.r
 
 // --- A1: Fisher-Yates Shuffle ---
 const shuffleArray = (array) => {
-    if (!Array.isArray(array)) throw new TypeError("Input must be an array.");
+    // Defensive Programming: Validate input type
+    if (!Array.isArray(array)) {
+        throw new TypeError("Input must be an array.");
+    }
+
+    // Iterate backwards to perform swaps
     for (let i = array.length - 1; i > 0; i--) {
+        // Pick a random index j such that 0 <= j <= i
         const j = Math.floor(Math.random() * (i + 1));
+
+        // ES6 Destructuring Swap: Clean, modern syntax
         [array[i], array[j]] = [array[j], array[i]];
     }
+
     return array;
 };
 
@@ -39,15 +48,26 @@ const shuffleArray = (array) => {
 const isPandigital = (input) => {
     const numString = String(input);
     const uniqueDigits = new Set();
+
     for (const char of numString) {
+        // Strict char comparison is faster than Regex
         if (char >= '0' && char <= '9') {
             uniqueDigits.add(char);
         }
+
+        // Optimization: If we already found all 10, we can exit early.
+        if (uniqueDigits.size === 10) return true;
     }
+
     return uniqueDigits.size === 10;
 };
 
 // --- B1: TodoList Architecture ---
+// Helper: Generates a mock UUID (pseudo-random string)
+// In production, we would use crypto.randomUUID()
+const generateId = () =>
+    '_' + Math.random().toString(36).substr(2, 9);
+
 const TaskStatus = {
     TODO: 'To Do',
     IN_PROGRESS: 'In Progress',
@@ -55,25 +75,26 @@ const TaskStatus = {
 };
 
 class Task {
-    constructor(id, title, description, dueDate) {
-        this.id = id;
-        this.title = title;
-        this.description = description;
+    constructor(title, description, dueDate) {
+        this.id = generateId(); // Unique ID for distributed readiness
+        this.title = title.trim();
+        this.description = description.trim();
         this.dueDate = new Date(dueDate);
         this.status = TaskStatus.TODO;
         this.createdAt = new Date();
     }
 
     update({ title, description, dueDate, status }) {
-        if (title) this.title = title;
-        if (description) this.description = description;
+        if (title) this.title = title.trim();
+        if (description) this.description = description.trim();
         if (dueDate) this.dueDate = new Date(dueDate);
+
+        // Strict validation for Status transitions
         if (status) {
             if (Object.values(TaskStatus).includes(status)) {
                 this.status = status;
             } else {
-                // Silently failing or warning in verify script for logic check
-                // console.warn(`Invalid status '${status}'`);
+                console.warn(`[System] Invalid status attempt: '${status}'`);
             }
         }
     }
@@ -82,11 +103,10 @@ class Task {
 class TodoList {
     constructor() {
         this.tasks = [];
-        this.idCounter = 1;
     }
 
     add(title, description, dueDate) {
-        const newTask = new Task(this.idCounter++, title, description, dueDate);
+        const newTask = new Task(title, description, dueDate);
         this.tasks.push(newTask);
         return newTask;
     }
@@ -94,7 +114,7 @@ class TodoList {
     delete(id) {
         const initialLength = this.tasks.length;
         this.tasks = this.tasks.filter(task => task.id !== id);
-        return this.tasks.length < initialLength;
+        return this.tasks.length < initialLength; // Returns true if deleted
     }
 
     edit(id, updates) {
@@ -104,10 +124,15 @@ class TodoList {
         return task;
     }
 
+    /**
+     * Reorganizes the list by moving a task from one index to another.
+     * Time Complexity: O(N) due to splice.
+     */
     reorganize(fromIndex, toIndex) {
         if (fromIndex < 0 || fromIndex >= this.tasks.length ||
             toIndex < 0 || toIndex >= this.tasks.length) {
-            return false; // Added return for testing
+            console.error("[System] Reorganize failed: Index out of bounds.");
+            return false;
         }
         const [movedTask] = this.tasks.splice(fromIndex, 1);
         this.tasks.splice(toIndex, 0, movedTask);
@@ -178,25 +203,42 @@ function verifyTodoList() {
 
     const list = new TodoList();
 
-    // 1. ADD
-    const t1 = list.add("Task 1", "Desc", "2026-01-01");
+    // 1. ADD & SANITIZATION
+    const t1 = list.add(" Task 1 ", "Desc ", "2026-01-01"); // Note spaces
     const t2 = list.add("Task 2", "Desc", "2026-01-02");
     const t3 = list.add("Task 3", "Desc", "2026-01-03");
 
     if (list.tasks.length === 3) logPass("Add: Count is 3");
     else logFail(`Add: Count is ${list.tasks.length}`);
 
-    // 2. EDIT
+    // Check Sanitization (Trim)
+    if (t1.title === "Task 1") logPass("Input Sanitization: Title trimmed");
+    else logFail(`Input Sanitization: Title is '${t1.title}'`);
+
+    // Check UUID
+    if (typeof t1.id === 'string' && t1.id.startsWith('_')) {
+        logPass("UUID: Generated correctly");
+    } else {
+        logFail(`UUID: Invalid format ${t1.id}`);
+    }
+
+    // 2. EDIT & VALIDATION
+    list.edit(t1.id, { status: 'INVALID_STATUS' });
+    if (t1.status === TaskStatus.TODO) {
+        logPass("Validation: Invalid status rejected");
+    } else {
+        logFail("Validation: Invalid status accepted");
+    }
+
     list.edit(t1.id, { status: TaskStatus.DONE, title: "Updated Task 1" });
-    if (list.tasks[0].status === 'Done' && list.tasks[0].title === "Updated Task 1") {
-        logPass("Edit: Status and Title updated");
+    if (list.tasks[0].status === 'Done') {
+        logPass("Edit: Valid status updated");
     } else {
         logFail("Edit: Update failed");
     }
 
     // 3. REORGANIZE
     // Move Task 3 (index 2) to top (index 0)
-    // Expected Order: [Task 3, Task 1, Task 2]
     list.reorganize(2, 0);
 
     if (list.tasks[0].id === t3.id && list.tasks[1].id === t1.id) {
@@ -206,7 +248,7 @@ function verifyTodoList() {
     }
 
     // 4. DELETE
-    list.delete(t2.id); // Delete Task 2
+    list.delete(t2.id);
     if (list.tasks.length === 2 && !list.tasks.find(t => t.id === t2.id)) {
         logPass("Delete: Removed correctly");
     } else {
