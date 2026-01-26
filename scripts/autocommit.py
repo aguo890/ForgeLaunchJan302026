@@ -8,7 +8,7 @@ from pathlib import Path
 # Setup paths
 SCRIPT_DIR = Path(__file__).parent
 ROOT_DIR = SCRIPT_DIR.parent
-DEVLOG_FILE = ROOT_DIR / "DEVLOG.md"  # <--- New Log File Path
+DEVLOG_FILE = ROOT_DIR / "docs" / "development_log.md"  # <--- New Log File Path
 
 try:
     from dotenv import load_dotenv
@@ -105,7 +105,7 @@ def generate_commit_message(client, diff, files):
 
 def update_qa_report(log_output):
     """Updates the QA_REPORT.md file with the new verification log and date."""
-    qa_file = ROOT_DIR / "docs" / "QA_REPORT.md"
+    qa_file = ROOT_DIR / "docs" / "qa_report.md"
     if not qa_file.exists():
         print("ℹ️  QA Report not found, skipping update.")
         return
@@ -194,7 +194,7 @@ def main():
         updated = update_qa_report(verification_output)
         if updated:
              # Stage the updated QA Report so it is included in the commit
-             qa_file = ROOT_DIR / "docs" / "QA_REPORT.md"
+             qa_file = ROOT_DIR / "docs" / "qa_report.md"
              subprocess.run(["git", "add", str(qa_file)], cwd=ROOT_DIR)
 
     # 1. Stage initial changes to get the diff

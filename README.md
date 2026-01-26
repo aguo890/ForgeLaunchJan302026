@@ -545,4 +545,16 @@ The prompt asks for "resources used, time taken, courses taken."
 - [x] Database Visual included? Yes, Mermaid diagram + textual description.
 - [x] Essays (150 words)? Yes, drafted with mission alignment.
 - [x] Meta-Questions included? Yes, section added.
-- [x] Deadline: Submit before Friday, Jan 30, 11:59 pm ET.
+- [x] deadline: Submit before Friday, Jan 30, 11:59 pm ET.
+
+## 7. Project Documentation Index
+For a detailed log of the development process and organized strategy notes, please refer to the following:
+
+- **[Development Log](./docs/development_log.md)**: A chronological diary of engineering decisions and iterations.
+- **[Algorithms Strategy](./docs/algorithms_strategy.md)**: Deep dive into Group A selection and implementation.
+- **[System Design Strategy](./docs/system_design_strategy.md)**: Architecture notes for the Planner and Database schema.
+- **[Essays Strategy](./docs/essays.md)**: Strategic breakdowns and drafts for the narrative component.
+- **[QA Report](./docs/qa_report.md)**: Automated test results and verification mechanics.
+- **[Submission Preview](./submission/SUBMISSION_PREVIEW.md)**: The consolidated finalized document.
+- **[Master Submission](./submission/MASTER_SUBMISSION.txt)**: Text-file backup of the final submission.
+

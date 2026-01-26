@@ -55,7 +55,7 @@ PART A: ALGORITHMS (Group A)
  * Uses crypto.getRandomValues for unbiased, secure distribution if available.
  * * COMPLEXITY:
  * - Time: O(N)
- * - Space: O(1) (In-place)
+ * - Space: O(N) (Auxiliary buffer for entropy)
  * * @param {Array} array - The array to shuffle.
  * @returns {Array} - The mutated array.
  */
@@ -122,22 +122,20 @@ const shuffleArray = (array) => {
 const isPandigital = (input) => {
     if (input == null) return false;
 
-    // Fast path: If it's a number, ensure it's not scientific notation 
-    // which distorts the "digits" concept (e.g., 1e21).
+    // Fast path: Number checks
     if (typeof input === 'number') {
-        // Optimization: Small numbers cannot be pandigital (must be > 1 billion)
-        if (input < 1023456789) return false;
-
-        // Convert to string to handle the digits safely
+        if (input < 1023456789) return false; // Minimum 0-9 pandigital
+        if (input > 9876543210) return false; // Maximum 0-9 pandigital
+        // Note: The integer check implies length 10 automatically within this range
+        
         const strVal = String(input);
         if (strVal.includes('e')) return false;
-
-        // Pass to the logic below
         return checkStringBitmask(strVal);
     }
 
     const str = String(input);
-    if (str.length < 10) return false;
+    // STRICTNESS CHECK: A pure 0-9 pandigital must be exactly 10 digits.
+    if (str.length !== 10) return false; 
 
     return checkStringBitmask(str);
 };
@@ -233,7 +231,7 @@ class TodoList {
   delete(id) {
     const initialLength = this.tasks.length;
     this.tasks = this.tasks.filter(task => task.id !== id);
-    return this.tasks.length < initialLength; // Returns true if deleted
+    return this.tasks.length < initialLength;
   }
 
   edit(id, updates) {
@@ -243,18 +241,23 @@ class TodoList {
     return task;
   }
 
-  /**
-   * Reorganizes the list by moving a task from one index to another.
-   * Time Complexity: O(N) due to splice.
-   */
   reorganize(fromIndex, toIndex) {
     if (fromIndex < 0 || fromIndex >= this.tasks.length || 
         toIndex < 0 || toIndex >= this.tasks.length) {
-      throw new RangeError(`Reorganize failed: Index ${fromIndex} or ${toIndex} is out of bounds (valid: 0..${this.tasks.length - 1}).`);
+      throw new RangeError(`Reorganize failed: Index out of bounds.`);
     }
     const [movedTask] = this.tasks.splice(fromIndex, 1);
     this.tasks.splice(toIndex, 0, movedTask);
     return true;
+  }
+
+  // Debugging utility for verification scripts
+  printState() {
+    console.log(`\n--- State (${this.tasks.length} tasks) ---`);
+    this.tasks.forEach((t, i) => {
+      console.log(`${i}. [${t.status}] ${t.title} (ID: ${t.id})`);
+    });
+    console.log('-------------------------------\n');
   }
 }
 
