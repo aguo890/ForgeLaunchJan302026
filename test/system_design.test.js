@@ -84,4 +84,54 @@ runTest('TodoList: Reorganize throws on out of bounds', () => {
     assert.throws(() => list.reorganize(-1, 0), /out of bounds/);
 });
 
+// CRITICAL EDGE CASE: Moving forward (lower to higher index)
+// This tests the index-shifting behavior after the first splice
+runTest('TodoList: Reorganize forward (lower to higher index)', () => {
+    const list = new TodoList();
+    list.add('A'); // Index 0
+    list.add('B'); // Index 1
+    list.add('C'); // Index 2
+    list.add('D'); // Index 3
+    list.add('E'); // Index 4
+
+    // Move 'B' (index 1) to slot 4
+    // After remove: [A, C, D, E] (array length is now 4)
+    // Insert at 4: [A, C, D, E, B] (B is now at the END)
+    list.reorganize(1, 4);
+    const tasks = list.getAll();
+
+    assert.strictEqual(tasks[0].description, 'A');
+    assert.strictEqual(tasks[1].description, 'C');
+    assert.strictEqual(tasks[2].description, 'D');
+    assert.strictEqual(tasks[3].description, 'E');
+    assert.strictEqual(tasks[4].description, 'B'); // B at the end
+});
+
+// Edge case: Move to same index (no-op)
+runTest('TodoList: Reorganize to same index is a no-op', () => {
+    const list = new TodoList();
+    list.add('A');
+    list.add('B');
+    list.add('C');
+
+    list.reorganize(1, 1); // Move B to B's position
+    const tasks = list.getAll();
+
+    assert.strictEqual(tasks[0].description, 'A');
+    assert.strictEqual(tasks[1].description, 'B');
+    assert.strictEqual(tasks[2].description, 'C');
+});
+
+// Edge case: Single element list (can only reorganize to itself)
+runTest('TodoList: Reorganize single element to itself', () => {
+    const list = new TodoList();
+    list.add('Solo');
+
+    list.reorganize(0, 0);
+    const tasks = list.getAll();
+
+    assert.strictEqual(tasks.length, 1);
+    assert.strictEqual(tasks[0].description, 'Solo');
+});
+
 console.log('\x1b[32mAll System Design tests passed.\x1b[0m');

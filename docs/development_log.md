@@ -285,3 +285,37 @@ The file now meets the submission requirements. It is focused, personal, and ali
 **Rationale/Logic:** This change transforms the section from a template to a verifiable record. Using the **official course codes and titles** adds authenticity and allows a technical reviewer to immediately infer the covered topics (e.g., `CSCI 2541W` suggests a writing-intensive database course with team projects). The ordering (likely chronological or by relevance) provides structure. The primary trade-off was brevity versus detail; we chose concise, standardized identifiers over lengthy descriptions, assuming the reader has or can find the relevant curriculum details.
 
 **Outcome:** The essay now presents a professional, factual academic background. The change was verified by ensuring the new list aligns with a standard university transcript format and removes all meta-commentary, leaving only substantive content.
+
+## [2026-01-26 18:08] Enhanced Reorganize Method with Slot-Based Semantics
+
+### Context/Problem
+The `TodoList.reorganize()` method had ambiguous behavior regarding how array indices shift during the move operation. The original implementation used two `splice()` calls but lacked clear documentation about the semantic model. This created potential confusion for developers about whether the method implements "insert AT position" vs "insert AFTER position" semantics, especially when moving items forward (from lower to higher indices).
+
+### Solution/Implementation
+Added comprehensive documentation with explicit **slot-based insertion** semantics and implemented targeted test cases for edge scenarios:
+
+1. **Enhanced JSDoc documentation** with:
+   - Clear semantic definition: "The item is placed INTO the slot at `toIndex`, shifting existing items"
+   - Concrete examples showing both backward (higher→lower) and forward (lower→higher) moves
+   - Explanation of array length changes between splice operations
+
+2. **Added three critical test cases**:
+   - `Reorganize forward (lower to higher index)`: Tests the index-shifting behavior where the target slot position changes after the first splice
+   - `Reorganize to same index is a no-op`: Validates idempotent behavior
+   - `Reorganize single element to itself`: Tests boundary condition with minimal list size
+
+### Rationale/Logic
+The key insight is that JavaScript's `splice()` method operates on the **current state** of the array. When moving forward:
+1. First `splice(fromIndex, 1)` removes the element, reducing array length by 1
+2. Second `splice(toIndex, 0, movedId)` inserts into what is now a **different logical position** due to the length change
+
+The documentation clarifies this as **slot-based insertion** rather than position-based insertion. This approach was chosen because:
+- **Predictability**: Developers can reason about the final state by understanding the two-phase operation
+- **Consistency**: Matches common UI drag-and-drop patterns where items drop into specific slots
+- **Performance**: O(n) time complexity due to array shifting, but acceptable for typical todo list sizes
+- **Maintainability**: Clear semantics reduce cognitive load for future maintainers
+
+### Outcome
+All tests pass, confirming the documented behavior matches implementation. The enhanced documentation provides:
+1. **Defensive programming** through explicit contracts
+2. **Self

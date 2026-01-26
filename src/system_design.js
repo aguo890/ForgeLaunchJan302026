@@ -188,8 +188,26 @@ class TodoList {
 
     /**
      * Reorganizes the list by moving a task from one index to another.
-     * @param {number} fromIndex - The source index.
-     * @param {number} toIndex - The destination index.
+     *
+     * SEMANTIC BEHAVIOR (Slot-Based Insertion):
+     * The item is placed INTO the slot at `toIndex`, shifting existing items.
+     *
+     * EXAMPLE 1: Moving backward (higher to lower index)
+     *   [A, B, C, D, E] → reorganize(4, 1)
+     *   Remove 'E' from index 4 → [A, B, C, D]
+     *   Insert 'E' at index 1  → [A, E, B, C, D]
+     *
+     * EXAMPLE 2: Moving forward (lower to higher index)
+     *   [A, B, C, D, E] → reorganize(1, 4)
+     *   Remove 'B' from index 1 → [A, C, D, E]  (array shrinks!)
+     *   Insert 'B' at index 4  → [A, C, D, E, B]
+     *   Note: 'B' ends up at the END because after removal, index 4 is the last slot.
+     *
+     * This implements "insert AT position" semantics, NOT "insert AFTER position."
+     * The behavior naturally handles the array length change between splice operations.
+     *
+     * @param {number} fromIndex - The source index (0-indexed).
+     * @param {number} toIndex - The destination slot index (0-indexed).
      * @throws {RangeError} If either index is out of bounds.
      */
     reorganize(fromIndex, toIndex) {
@@ -198,6 +216,8 @@ class TodoList {
             throw new RangeError('Reorganize failed: Index out of bounds.');
         }
 
+        // [PATTERN] Two-phase splice: Remove, then insert at target position
+        // The array automatically adjusts indices between operations.
         const [movedId] = this.taskOrder.splice(fromIndex, 1);
         this.taskOrder.splice(toIndex, 0, movedId);
     }
