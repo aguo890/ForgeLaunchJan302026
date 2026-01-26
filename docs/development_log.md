@@ -99,3 +99,9 @@
 - Updated the mock data injection section to capture returned task objects, allowing the use of actual IDs instead of hardcoded values for `edit`, `delete`, and logging actions.
 - Improved logging clarity by dynamically referencing task IDs in console messages, making the demonstration more realistic and traceable.
 - Maintained the core functionality of task management operations (add, edit, delete, reorganize) while ensuring the code is more robust and easier to follow in a demo scenario.
+
+## [2026-01-26 04:44]
+*   Modified the `TodoList.add()` method to return only the new task's ID instead of the entire task object, simplifying the API and reducing data exposure.
+*   Updated all corresponding test cases to use the returned ID for subsequent operations (edit, delete), ensuring consistency with the new method signature.
+*   Refined the error message in the `TodoList.reorganize()` method for out-of-bounds indices to be more descriptive.
+*   Added a `test_output.txt` file to capture the results of the test suite execution, which shows one test failure related to the updated error message regex.

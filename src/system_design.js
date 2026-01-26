@@ -46,7 +46,7 @@ class TodoList {
         const id = this._idCounter++;
         const newTask = new Task(id, description);
         this.tasks.push(newTask);
-        return newTask;
+        return newTask.id;
     }
 
     delete(id) {

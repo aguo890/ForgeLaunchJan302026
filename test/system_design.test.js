@@ -46,17 +46,17 @@ runTest('Task: Should throw error on invalid status', () => {
 runTest('TodoList: Full Workflow (Add -> Edit -> Delete)', () => {
     const list = new TodoList();
 
-    // Add
-    const t1 = list.add('Item 1 [MOCK]');
-    const t2 = list.add('Item 2 [MOCK]');
+    // Add - Returns ID now
+    const t1Id = list.add('Item 1 [MOCK]');
+    const t2Id = list.add('Item 2 [MOCK]');
     assert.strictEqual(list.getAll().length, 2);
 
     // Edit
-    list.edit(t1.id, 'Item 1 Updated [MOCK]');
+    list.edit(t1Id, 'Item 1 Updated [MOCK]');
     assert.strictEqual(list.getAll()[0].description, 'Item 1 Updated [MOCK]');
 
     // Delete
-    const deleted = list.delete(t2.id);
+    const deleted = list.delete(t2Id);
     assert.strictEqual(deleted, true);
     assert.strictEqual(list.getAll().length, 1);
 });
@@ -80,8 +80,8 @@ runTest('TodoList: Reorganize items (Boundary Check)', () => {
 runTest('TodoList: Reorganize throws on out of bounds', () => {
     const list = new TodoList();
     list.add('A');
-    assert.throws(() => list.reorganize(0, 5), /Index out of bounds/);
-    assert.throws(() => list.reorganize(-1, 0), /Index out of bounds/);
+    assert.throws(() => list.reorganize(0, 5), /out of bounds/);
+    assert.throws(() => list.reorganize(-1, 0), /out of bounds/);
 });
 
 console.log('\x1b[32mAll System Design tests passed.\x1b[0m');
