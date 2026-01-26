@@ -225,7 +225,7 @@ class TodoList {
   add(title, description, dueDate) {
     const newTask = new Task(title, description, dueDate);
     this.tasks.push(newTask);
-    return newTask;
+    return newTask; // Return object so we can track the ID
   }
 
   delete(id) {
@@ -266,28 +266,28 @@ class TodoList {
 const myTracker = new TodoList();
 
 // --- MOCK DATA INJECTION ---
-// Simulating initial state for demonstration purposes
 console.log("Action: Injecting Mock Data...");
-myTracker.add("Finish Forge Challenge", "Complete code and essays", "2026-01-30");
-myTracker.add("Buy Groceries", "Milk, Coffee, Bread", "2026-02-01");
-myTracker.add("Call Mentor", "Discuss internship goals", "2026-01-28");
+// Capture the returned objects to access their generated IDs
+const t1 = myTracker.add("Finish Forge Challenge", "Complete code and essays", "2026-01-30");
+const t2 = myTracker.add("Buy Groceries", "Milk, Coffee, Bread", "2026-02-01");
+const t3 = myTracker.add("Call Mentor", "Discuss internship goals", "2026-01-28");
 
 myTracker.printState();
 
-console.log("Action: Completing 'Call Mentor'...");
-// Assuming 'Call Mentor' is ID 3 (since it was added 3rd)
-myTracker.edit(3, { status: TaskStatus.DONE });
+console.log(`Action: Completing 'Call Mentor' (ID: ${t3.id})...`);
+myTracker.edit(t3.id, { status: TaskStatus.DONE });
 
 console.log("Action: Reorganizing 'Buy Groceries' to the top...");
-// 'Buy Groceries' is at index 1. Moving to index 0.
+// Reorganize uses Array Indices, so this remains (1 -> 0)
 myTracker.reorganize(1, 0);
 
 myTracker.printState();
 
-console.log("Action: Deleting 'Finish Forge Challenge' (ID 1)...");
-myTracker.delete(1);
+console.log(`Action: Deleting 'Finish Forge Challenge' (ID: ${t1.id})...`);
+myTracker.delete(t1.id);
 
 myTracker.printState();
+
 ```
 
 ================================================================================
