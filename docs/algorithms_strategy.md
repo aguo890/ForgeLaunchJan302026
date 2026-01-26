@@ -130,7 +130,8 @@ A "Pandigital" number is one that contains all digits within a specific base. Th
 **Type Handling Requirements:** While the prompt specifies "integer detection," JavaScript `Number` types are floating-point values (IEEE 754). Integers larger than $2^{53} - 1$ (`Number.MAX_SAFE_INTEGER`) lose precision. A truly robust solution must handle the input as a string or convert the number to a string immediately to avoid precision loss on large pandigital numbers.
 
 ### 4.2 Problem Definition & Strict Permutation
-In a professional context, "Pandigital" implies a strict permutation of set elements. For digits 0-9, this mandates exactly 10 characters.
+> **Design Decision: Strict vs. Loose Pandigitality**
+> We enforce a strict 10-digit permutation (0-9 exactly once). While a looser "at least once" interpretation is mathematically valid, the permutation approach is the standard expectation in interview and competitive contexts (e.g., Project Euler). Our implementation utilizes a bitmask strategy to ensure $O(1)$ space complexity while maintaining this high-precision requirement.
 
 ### 4.3 The Bitwise Strategy + Length Guard
 *   **Bitmask:** We utilize a 32-bit integer. When digit $k$ is seen, `mask |= (1 << k)`.
