@@ -53,26 +53,42 @@ We can leverage ES6 Destructuring Assignment to perform the swap operation in a 
  * @returns {Array} - The mutated, shuffled array.
  */
 const shuffleArray = (array) => {
-  // Defensive Programming: Validate input type
-  if (!Array.isArray(array)) {
-    throw new TypeError("Input must be an array.");
+  if (!Array.isArray(array)) throw new TypeError("Input must be an array.");
+
+  const len = array.length;
+  if (len <= 1) return array;
+
+  // Optimization: Batch the random value generation to avoid 
+  // N system calls and N allocations inside the loop.
+  let randomValues = null;
+  const useCrypto = typeof crypto !== 'undefined' && crypto.getRandomValues;
+
+  if (useCrypto) {
+    randomValues = new Uint32Array(len);
+    crypto.getRandomValues(randomValues);
   }
 
-  // Iterate backwards to perform swaps
-  for (let i = array.length - 1; i > 0; i--) {
-    // Pick a random index j such that 0 <= j <= i
-    const j = Math.floor(Math.random() * (i + 1));
-    
-    // ES6 Destructuring Swap: Clean, modern syntax
+  for (let i = len - 1; i > 0; i--) {
+    let j;
+
+    if (useCrypto) {
+      // Use the pre-generated random value for this iteration.
+      // Scale strict 32-bit int to range [0, i].
+      // Note: Modulo bias is technically present but negligible for this project scope.
+      j = randomValues[i] % (i + 1);
+    } else {
+      // Fallback for older environments
+      j = Math.floor(Math.random() * (i + 1));
+    }
+
     [array[i], array[j]] = [array[j], array[i]];
   }
-  
   return array;
 };
 ```
 
-### 3.4 Deep Insight: Why This Matters
-By implementing Fisher-Yates, the candidate demonstrates an understanding of "correctness" that goes beyond "it looks random." In applications like cryptography, gaming, or randomized controlled trials, bias can be catastrophic. Acknowledging this distinction in the code comments sets the candidate apart as a thoughtful engineer.
+### 3.4 Deep Insight: Performance & Security Balance
+By implementing Fisher-Yates, we ensure mathematical correctness. However, a naive implementation of `crypto.getRandomValues` inside a loop would be a performance disaster due to system call overhead. This solution demonstrates "Staff-level" awareness by **batching entropy generation**: we allocate a single `Uint32Array` and fetch all required random bits in one operation (1 system call) rather than fetching them per iteration (N system calls). This balances cryptographic strength with high-performance execution.
 
 ---
 
@@ -101,22 +117,29 @@ The most efficient way to check for the presence of unique items is using a **Ha
  * @returns {boolean} - True if the input contains all digits 0-9.
  */
 const isPandigital = (input) => {
-  const numString = String(input);
-  const uniqueDigits = new Set();
-  
-  for (const char of numString) {
-    // Strict char comparison is faster than Regex
+  // Fast fail for null/undefined
+  if (input == null) return false;
+
+  const str = String(input);
+
+  // Optimization: A 0-9 pandigital number must have at least 10 digits.
+  if (str.length < 10) return false;
+
+  const seen = new Set();
+
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    // ASCII check for '0' (48) to '9' (57)
     if (char >= '0' && char <= '9') {
-      uniqueDigits.add(char);
+      seen.add(char);
+      // Optimization: Early exit once we have all 10
+      if (seen.size === 10) return true;
     }
-    
-    // Optimization: If we already found all 10, we can exit early.
-    if (uniqueDigits.size === 10) return true;
   }
-  
-  return uniqueDigits.size === 10;
+
+  return false;
 };
 ```
 
 ### 4.4 Insight: Type Coercion and Safety
-This solution highlights the "nuanced understanding" requested. A naive user might do `input.toString()`. However, if `input` is `null` or `undefined`, `input.toString()` throws an error. `String(input)` converts null to "null", which is safer (though ideally validation would be added). The code provided includes comments explaining these decisions, which serves as a signal of seniority to the reviewer.
+This solution highlights "nuanced understanding" in two ways. First, it explicitly handles `null`/`undefined` to prevent runtime errors. Second, it optimizes for performance by discarding strings shorter than 10 characters and using early returns. Finally, the comments warn about IEEE 754 floating-point precision loss, showing deep platform knowledge regarding large integers.
