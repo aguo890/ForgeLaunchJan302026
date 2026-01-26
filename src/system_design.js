@@ -78,7 +78,7 @@ class TodoList {
     reorganize(fromIndex, toIndex) {
         if (fromIndex < 0 || fromIndex >= this.tasks.length ||
             toIndex < 0 || toIndex >= this.tasks.length) {
-            throw new Error('Index out of bounds.');
+            throw new RangeError(`Reorganize failed: Index ${fromIndex} or ${toIndex} is out of bounds (valid: 0..${this.tasks.length - 1}).`);
         }
 
         const [movedTask] = this.tasks.splice(fromIndex, 1);

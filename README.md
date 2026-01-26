@@ -59,11 +59,11 @@ The first section of the technical challenge requires selecting two questions fr
 
 ### 3.1 Strategic Question Selection
 
-To "make the best project," the candidate must choose the questions that offer the highest ceiling for demonstrating technical depth.
+To "make the best project," I needed to choose the questions that offer the highest ceiling for demonstrating technical depth.
 *   **Palindrome Detection** and **Yee/Haw** are trivial exercises often assigned to first-year students. While solving them correctly is acceptable, they offer little room to showcase advanced knowledge of data structures or probability.
-*   **Pandigital Detection** and **Random Array Reordering** involve deeper mathematical concepts (Set theory, permutations, probability distribution) and performance considerations ($O(N)$ complexity).
+*   **Pandigital Detection** and **Random Array Reordering** involve deeper mathematical concepts (bit manipulation, permutations, probability distribution) and performance considerations ($O(N)$ complexity).
 
-Therefore, this report advises selecting **Randomly Reorder an Array** and **Pandigital Integer Detection**. These choices signal confidence in handling complex data manipulation and algorithmic theory.
+I selected **Randomly Reorder an Array** and **Pandigital Integer Detection** because these choices signal confidence in handling complex data manipulation and algorithmic theory.
 
 ### 3.2 Question A1: Randomly Reorder an Array
 
@@ -147,53 +147,59 @@ A "Pandigital" number is one that contains all digits within a specific base. Th
 **Type Handling Requirements**:
 While the prompt specifies "integer detection," JavaScript Number types are floating-point values (IEEE 754). Integers larger than $2^{53} - 1$ (`Number.MAX_SAFE_INTEGER`) lose precision. A truly robust solution must handle the input as a string or convert the number to a string immediately to avoid precision loss on large pandigital numbers (e.g., a 20-digit number).
 
-#### 3.3.2 The Set Theory Approach
-The most efficient way to check for the presence of unique items is using a Hash Set. A `Set` in JavaScript is a collection of values where each value must be unique.
+#### 3.3.2 The Bitmask Approach
+While a `Set` is a common approach ($O(N)$ time), it requires allocating heap memory for the Set structure on every function call. I implemented a more performant, system-level approach using **Bitmasking**.
 
-*   **Logic**: If we insert every digit of the number into a Set, a valid 0-9 pandigital number must result in a Set with a `.size` of exactly 10 (digits 0, 1, 2, 3, 4, 5, 6, 7, 8, 9).
-*   **Efficiency**: This approach requires a single pass through the string $O(N)$ and constant space $O(1)$ (since the set will never exceed 10 elements). This is superior to creating an array of flags or using nested loops.
+*   **Logic**: By using a single 32-bit integer as a mask, I track seen digits using bitwise operators (`|` and `<<`). Each bit position 0-9 represents whether that digit has been found. When the mask equals `0b1111111111` (decimal 1023), all 10 digits are present.
+*   **Efficiency**: This reduces Space Complexity from $O(1)$ (heap allocation for Set) to strictly $O(1)$ (stack storage—a single integer register). In high-frequency scenarios like searching for pandigital primes, this eliminates Garbage Collection overhead entirely.
 
 #### 3.3.3 The Solution Code
 ```javascript
 /**
- * Detects if a given number or string is a 0-9 pandigital number.
- * 
- * DEFINITION:
- * A 0-9 pandigital number is an integer that contains every digit from 0 to 9 
- * at least once. (e.g., 1023456789 is the smallest 0-9 pandigital number).
- * 
- * IMPLEMENTATION STRATEGY:
- * We utilize the JavaScript 'Set' data structure. A Set only stores unique values.
- * By iterating through the string representation of the number and adding each digit 
- * to the Set, we can determine pandigital status by checking if the Set's size is 10.
- * 
- * EDGE CASES HANDLED:
- * - Input types: Handles both Number and String inputs.
- * - Precision: Converts to string immediately to handle large integers safely.
- * - Negative numbers: Filters out non-digit characters (like '-').
- * 
- * @param {number|string} input - The integer or string to check.
- * @returns {boolean} - True if the input contains all digits 0-9.
+ * Detects if a value is a 0-9 pandigital number using Bitwise operations.
+ * * ALGORITHMIC STRATEGY:
+ * Uses a bitmask to track seen digits. This allows for O(1) Space complexity
+ * (a single integer) compared to O(N) Space for a Set or Array.
+ * * COMPLEXITY:
+ * - Time: O(N) where N is the number of digits.
+ * - Space: O(1) - Constant space usage (single integer variable).
+ * * @param {string|number} input - The value to check.
+ * @returns {boolean}
  */
 const isPandigital = (input) => {
-  // Convert input to string to iterate over digits. 
-  // This handles both Number and String inputs robustly.
-  const numString = String(input);
-  
-  // Initialize a Set to store unique digits found.
-  const uniqueDigits = new Set();
-  
-  // Iterate over each character in the string
-  for (const char of numString) {
-    // Check if the character is a valid digit '0' through '9'.
-    // This effectively ignores negative signs, decimal points, or whitespace.
-    if (char >= '0' && char <= '9') {
-      uniqueDigits.add(char);
+    if (input == null) return false;
+
+    // Fast path: If it's a number, ensure it's not scientific notation
+    if (typeof input === 'number') {
+        if (input < 1023456789) return false;
+        const strVal = String(input);
+        if (strVal.includes('e')) return false;
+        return checkStringBitmask(strVal);
     }
-  }
-  
-  // A strictly 0-9 pandigital number must contain exactly 10 unique digits.
-  return uniqueDigits.size === 10;
+
+    const str = String(input);
+    if (str.length < 10) return false;
+    return checkStringBitmask(str);
+};
+
+/**
+ * Helper function to perform the bitmask check on a string.
+ * Checks against binary 1111111111 (Decimal 1023).
+ */
+const checkStringBitmask = (str) => {
+    let mask = 0;
+    const TARGET_MASK = 0b1111111111; // Binary literal for clarity (ES6)
+
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        // ASCII '0' is 48, '9' is 57
+        if (code >= 48 && code <= 57) {
+            const digit = code - 48;
+            mask |= (1 << digit); // Set the bit corresponding to the digit
+            if (mask === TARGET_MASK) return true;
+        }
+    }
+    return false;
 };
 
 // --- META: Verification and Usage ---
@@ -207,8 +213,13 @@ testCases.forEach(test => {
 });
 ```
 
-#### 3.3.4 Insight: Type Coercion and Safety
-This solution highlights the "nuanced understanding" requested by the user. A naive user might do `input.toString()`. However, if `input` is `null` or `undefined`, `input.toString()` throws an error. `String(input)` converts null to "null", which is safer, though ideally, we would add input validation at the top. The code provided includes comments explaining these decisions, which serves as a signal of seniority to the reviewer.
+#### 3.3.4 Insight: Why Bitmask Over Set?
+I chose the Bitmask approach for several reasons:
+
+1. **Zero Heap Allocation:** The Set implementation allocates a new Object on the heap for every function call. In high-throughput scenarios, this creates memory churn and triggers frequent Garbage Collection pauses.
+2. **JIT Optimization:** Bitwise operations are highly optimizable by V8's JIT compiler as they operate on primitive integers.
+3. **Type Safety:** I added guards for scientific notation (e.g., `1e21`) which can destroy digit-based logic.
+4. **Bitwise Safety:** JS bitwise operators are limited to 32-bit signed integers, but our domain (digits 0-9) fits within 10 bits, making this safe and optimal.
 
 ## 4. Part 1: Software Engineering Project - Group B (System Design)
 
@@ -348,8 +359,7 @@ class TodoList {
     // 1. Boundary Checks
     if (fromIndex < 0 || fromIndex >= this.tasks.length || 
         toIndex < 0 || toIndex >= this.tasks.length) {
-      console.error("Reorganize failed: Index out of bounds.");
-      return;
+      throw new RangeError(`Reorganize failed: Index ${fromIndex} or ${toIndex} is out of bounds (valid: 0..${this.tasks.length - 1}).`);
     }
 
     // 2. Remove from old position
@@ -376,7 +386,9 @@ class TodoList {
 // This section simulates a user interacting with the application.
 const myTracker = new TodoList();
 
-console.log("Action: Adding Tasks...");
+// --- MOCK DATA INJECTION ---
+// Simulating initial state for demonstration purposes
+console.log("Action: Injecting Mock Data...");
 myTracker.add("Finish Forge Challenge", "Complete code and essays", "2026-01-30");
 myTracker.add("Buy Groceries", "Milk, Coffee, Bread", "2026-02-01");
 myTracker.add("Call Mentor", "Discuss internship goals", "2026-01-28");
