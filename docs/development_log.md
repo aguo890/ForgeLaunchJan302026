@@ -157,3 +157,10 @@
 *   Enhanced the `shuffleArray` function's memory efficiency by implementing a static singleton buffer for entropy, eliminating garbage collection thrash during repeated calls.
 *   Strengthened the `isPandigital` function's integrity with strict validation against IEEE 754 precision loss for large numbers and scientific notation.
 *   Consolidated engineering highlights and documentation into a single, coherent header comment for better code readability and context.
+
+## [2026-01-26 05:30]
+- Enhanced the `isPandigital` function to strictly reject strings containing any non-digit characters, preventing false positives from inputs like "abc0123456789xyz" or "1023456789.5".
+- Improved the `shuffleArray` function's entropy management by implementing a shared cursor pattern, amortizing the cost of cryptographic random number generation across multiple calls for better performance.
+- Added a private `_resetEntropy` function to allow deterministic testing by resetting the module's internal random state.
+- Updated test cases to align with the stricter `isPandigital` validation, ensuring only strings consisting exclusively of digits 0-9 are accepted.
+- Refactored code for better cross-environment compatibility, explicitly resolving the crypto API for both browser and Node.js (including older versions).

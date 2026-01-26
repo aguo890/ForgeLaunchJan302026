@@ -72,8 +72,9 @@ describe('isPandigital', () => {
         assert.strictEqual(isPandigital(1023456789), true);
     });
 
-    it('should return true for pandigital with extra non-digits', () => {
-        assert.strictEqual(isPandigital('abc0123456789xyz'), true);
+    it('should return false for strings with non-digits', () => {
+        assert.strictEqual(isPandigital('abc0123456789xyz'), false);
+        assert.strictEqual(isPandigital('1023456789.5'), false);
     });
 
     it('should return false if a digit is missing', () => {
@@ -85,10 +86,10 @@ describe('isPandigital', () => {
         // 10234567890123456789 is fine as string
         assert.strictEqual(isPandigital('10234567890123456789'), true);
     });
-    it('should return TRUE for strings that happen to look like scientific notation if they have all digits', () => {
-        // "1e234567890" contains all digits 0-9.
-        // As a STRING input, this is just a sequence of characters.
-        assert.strictEqual(isPandigital('1e234567890'), true);
+    it('should return FALSE for strings that happen to look like scientific notation (mixed characters)', () => {
+        // "1e234567890" contains all digits 0-9 but also 'e'.
+        // My strict validation now rejects strings with any non-digit.
+        assert.strictEqual(isPandigital('1e234567890'), false);
     });
 
     it('should return FALSE for scientific notation NUMBERS (data loss)', () => {
@@ -102,5 +103,11 @@ describe('isPandigital', () => {
         // Users must pass strings for such large values.
         const unsafeInteger = Number.MAX_SAFE_INTEGER + 10;
         assert.strictEqual(isPandigital(unsafeInteger), false);
+    });
+
+    it('should allow resetting entropy state', () => {
+        const { _resetEntropy } = require('../src/algorithms.js');
+        // Simple verification that it doesn't throw
+        assert.doesNotThrow(() => _resetEntropy());
     });
 });

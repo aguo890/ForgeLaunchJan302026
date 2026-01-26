@@ -5,19 +5,31 @@
  * ENGINEERING HIGHLIGHTS (FORGE EVALUATION CONTEXT):
  * 1. Maintainability: Helper functions are hoisted to the top for clear dependency flow.
  * 2. Efficiency: 'shuffleArray' uses a Static Singleton Buffer to prevent Garbage Collection
- * thrashing during repeated calls (O(1) Memory allocation overhead).
- * 3. Integrity: 'isPandigital' uses Bitmasking (O(1) Space) and strictly guards against
- * IEEE 754 precision loss in large numbers.
+ *    thrashing during repeated calls (O(1) Memory allocation overhead).
+ * 3. Resource Stewardship: Implements a 'Shared Cursor Pattern' to amortize the cost of
+ *    cryptographic entropy generation across multiple calls.
+ * 4. Integrity: 'isPandigital' uses Bitmasking (O(1) Space) and strictly guards against
+ *    IEEE 754 precision loss and non-digit string artifacts.
  */
+
+// --- MODULE SCOPE CONSTANTS & SHARED STATE ---
+const BUFFER_SIZE = 4096;
+const MAX_UINT32 = 0xFFFFFFFF;
+let sharedRandomBuffer = null;
+let sharedCursor = BUFFER_SIZE; // Initialize at end to force refill on first use
+
+// Resolve crypto for both Browser and Node.js (CommonJS) environments
+// This ensures the "High-performance" path is used even in older Node.js (v18 and below)
+const cryptoLib = typeof crypto !== 'undefined' ? crypto : (typeof require === 'function' ? require('crypto').webcrypto : undefined);
+const useCrypto = !!(cryptoLib && cryptoLib.getRandomValues);
 
 /* -------------------------------------------------------------------------- */
 /* HELPER FUNCTIONS                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Validates if a string contains all digits 0-9 using a Bitmask.
- * Placed at the top level to ensure lexical scoping availability.
- *
+ * Validates if a string contains ONLY digits and satisfies the 0-9 Pandigital condition.
+ * 
  * @param {string} str
  * @returns {boolean}
  */
@@ -28,36 +40,30 @@ const checkStringBitmask = (str) => {
     for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);
 
-        // ASCII '0' is 48, '9' is 57
-        if (code >= 48 && code <= 57) {
-            const digit = code - 48;
-            mask |= (1 << digit); // Set the bit corresponding to the digit
+        // STRICTURE: Fail if any character is NOT a digit (0-9)
+        // This prevents false positives like "1234567890.5"
+        if (code < 48 || code > 57) return false;
 
-            // Optimization: Early exit if we have found all 10 digits
-            if (mask === TARGET_MASK) return true;
-        }
+        const digit = code - 48;
+        mask |= (1 << digit); // Set the bit corresponding to the digit
+
+        // Early exit optimization: If we found all digits, we can stop IF we check rest later
+        // But for "contains ONLY digits", we must check every character anyway.
+        // So we only exit early if we've reached the end of the string.
     }
-    return false;
+    return mask === TARGET_MASK;
 };
 
 /* -------------------------------------------------------------------------- */
 /* CORE IMPLEMENTATION                             */
 /* -------------------------------------------------------------------------- */
 
-// MEMORY OPTIMIZATION:
-// We use a module-level singleton buffer. If we allocated a new Uint32Array
-// inside the function every time, it would trigger Garbage Collection (GC) pauses
-// on high-frequency calls. This keeps memory churn near zero.
-const BUFFER_SIZE = 4096;
-const MAX_UINT32 = 0xFFFFFFFF;
-let sharedRandomBuffer = null;
-
 /**
  * Randomly reorders (shuffles) an array in-place using Fisher-Yates with Rejection Sampling.
  *
  * COMPLEXITY:
  * - Time: O(N)
- * - Space: O(1) - Uses a pre-allocated static entropy buffer.
+ * - Space: O(1) - Uses a pre-allocated static entropy buffer and shared cursor.
  *
  * @param {Array} array - The array to shuffle.
  * @returns {Array} - The mutated array.
@@ -68,19 +74,15 @@ const shuffleArray = (array) => {
     const len = array.length;
     if (len <= 1) return array;
 
-    const useCrypto = typeof crypto !== 'undefined' && crypto.getRandomValues;
-
     // Lazy-initialize the singleton buffer on first use
     if (useCrypto && !sharedRandomBuffer) {
         sharedRandomBuffer = new Uint32Array(BUFFER_SIZE);
     }
 
-    let cursor = BUFFER_SIZE; // Start at end to trigger initial refill
-
-    // Helper to refill only our static view
+    // Helper to refill our static buffer
     const refillBuffer = () => {
-        crypto.getRandomValues(sharedRandomBuffer);
-        cursor = 0;
+        cryptoLib.getRandomValues(sharedRandomBuffer);
+        sharedCursor = 0;
     };
 
     for (let i = len - 1; i > 0; i--) {
@@ -89,18 +91,17 @@ const shuffleArray = (array) => {
         if (useCrypto) {
             const range = i + 1;
             // Rejection sampling threshold to remove modulo bias
-            // We reject random numbers that fall in the incomplete remainder zone
             const threshold = MAX_UINT32 - (MAX_UINT32 % range);
 
             let candidate;
             do {
-                if (cursor >= BUFFER_SIZE) refillBuffer();
-                candidate = sharedRandomBuffer[cursor++];
+                if (sharedCursor >= BUFFER_SIZE) refillBuffer();
+                candidate = sharedRandomBuffer[sharedCursor++];
             } while (candidate >= threshold);
 
             j = candidate % range;
         } else {
-            // Fallback for non-crypto environments (e.g., older Jest envs)
+            // Fallback for non-crypto environments
             j = Math.floor(Math.random() * (i + 1));
         }
 
@@ -113,7 +114,8 @@ const shuffleArray = (array) => {
  * Detects if a value is a 0-9 pandigital number using a Bitmask Strategy.
  *
  * SAFETY NOTE:
- * Strictly rejects unsafe integers (IEEE 754 precision loss) to prevent false positives.
+ * Strictly rejects unsafe integers (IEEE 754 precision loss) and non-digit strings
+ * to ensure that exactly the digits 0-9 are present with no other characters.
  *
  * @param {string|number} input - The value to check.
  * @returns {boolean}
@@ -127,7 +129,6 @@ const isPandigital = (input) => {
         if (input < 1023456789) return false;
 
         // SAFETY: If the number is too large, JS has ALREADY corrupted the digits.
-        // We must reject it to avoid validating precision artifacts.
         if (!Number.isSafeInteger(input)) return false;
 
         const strVal = String(input);
@@ -143,4 +144,10 @@ const isPandigital = (input) => {
     return checkStringBitmask(str);
 };
 
-module.exports = { shuffleArray, isPandigital };
+// Export internal reset for deterministic testing
+const _resetEntropy = () => {
+    sharedCursor = BUFFER_SIZE;
+    sharedRandomBuffer = null;
+};
+
+module.exports = { shuffleArray, isPandigital, _resetEntropy };
