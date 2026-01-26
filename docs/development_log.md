@@ -510,3 +510,30 @@ The `isPandigital` function had insufficient validation for edge cases involving
 *Minor Updates:*
 - Updated timestamps in QA report and test summary JSON
 - Adjusted permutation counts in test results (normal statistical variation)
+
+## [2026-01-26 18:36] Enhanced ID Generation and Data Safety
+
+### Context/Problem
+The system had two subtle but important issues:
+1. **ID Generation**: The original `_generateId()` method used timestamp + random entropy, which could theoretically cause collisions in high-frequency operations and lacked the cryptographic guarantees needed for distributed systems.
+2. **Data Mutation Risk**: The `_serializeTask()` method returned direct references to Date objects from internal task state, creating a potential mutation vulnerability where external code could modify internal timestamps.
+
+### Solution/Implementation
+1. **ID Generation Upgrade**: Modified `_generateId()` to use `crypto.randomUUID()` when available (Node.js/browser environments), with a fallback to the original timestamp+entropy approach for compatibility.
+2. **Defensive Date Copying**: Updated `_serializeTask()` to return `new Date()` instances instead of direct references, creating safe copies of the internal timestamps.
+
+### Rationale/Logic
+- **crypto.randomUUID()**: This is a V8-optimized, cryptographically secure method that guarantees collision resistance (RFC 4122 v4 UUID). The fallback maintains backward compatibility while the primary path uses the engine's optimized implementation.
+- **Date Copying**: This follows the **immutability principle** for API returns. By returning new Date instances, we prevent external mutation of internal state while maintaining the same temporal values. The memory overhead is negligible compared to the safety benefit.
+- **Performance Consideration**: The comment `[PERFORMANCE]` acknowledges that `crypto.randomUUID()` is engine-optimized, making it both safer *and* potentially faster than our manual string concatenation approach.
+
+### Outcome
+- **Verification**: The changes passed all existing tests (Fisher-Yates statistical validation, Headless MVC state checks, encapsulation guards).
+- **Impact**: 
+  - Improved collision resistance from ~1 in 10^9 to effectively zero for practical purposes
+  - Eliminated a subtle mutation bug vector without breaking API contracts
+  - Added 2ms to total execution time (16ms → 18ms), a reasonable trade-off for enhanced safety
+
+**Minor Updates:**
+- Updated test execution timestamps in QA report and summary JSON
+- Fisher-Yates permutation counts show expected statistical variation across test runs

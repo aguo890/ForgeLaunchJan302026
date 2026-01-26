@@ -106,12 +106,16 @@ class TodoList {
 
     /**
      * Generates a collision-resistant unique ID.
-     * Uses timestamp + random entropy for uniqueness across sessions.
+     * Uses crypto.randomUUID() when available, with fallback to timestamp + entropy.
      * @returns {string} A unique identifier string.
      * @private
      */
     _generateId() {
-        return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+        // [PERFORMANCE] crypto.randomUUID() is optimized at the engine level 
+        // and guarantees collision resistance suitable for distributed systems.
+        return typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
     }
 
     /**
@@ -126,8 +130,9 @@ class TodoList {
             id: task.id,
             description: task.description,
             status: task.status,
-            createdAt: task.createdAt,
-            updatedAt: task.updatedAt // [AUDIT] Expose modification trail
+            // [SAFETY] Return new Date instances to prevent reference mutation
+            createdAt: new Date(task.createdAt),
+            updatedAt: new Date(task.updatedAt)
         });
     }
 
