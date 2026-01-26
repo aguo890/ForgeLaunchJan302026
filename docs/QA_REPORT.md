@@ -10,27 +10,27 @@ To ensure the integrity of the code submitted for the Forge Launch Challenge, a 
 The following log represents the output of the automated verification script.
 
 ```text
-[33mSTARTING VERIFICATION...[0m
+STARTING VERIFICATION...
 
-[34m=== Testing A1: Fisher-Yates Shuffle ===[0m
+=== Testing A1: Fisher-Yates Shuffle ===
 Running 60000 iterations on [1, 2, 3]...
-[32m✔ PASS:[0m Distribution is statistically uniform (Unbiased).
+✔ PASS: Distribution is statistically uniform (Unbiased).
 
-[34m=== Testing A2: Pandigital Detection ===[0m
-[32m✔ PASS:[0m Case [Standard 0-9 String]: Got true
-[32m✔ PASS:[0m Case [Standard 0-9 Number]: Got true
-[32m✔ PASS:[0m Case [Long w/ Duplicates]: Got true
-[32m✔ PASS:[0m Case [Missing Zero]: Got false
-[32m✔ PASS:[0m Case [Non-Digits]: Got false
-[32m✔ PASS:[0m Case [Short Number]: Got false
+=== Testing A2: Pandigital Detection ===
+✔ PASS: Case [Standard 0-9 String]: Got true
+✔ PASS: Case [Standard 0-9 Number]: Got true
+✔ PASS: Case [Long w/ Duplicates]: Got true
+✔ PASS: Case [Missing Zero]: Got false
+✔ PASS: Case [Non-Digits]: Got false
+✔ PASS: Case [Short Number]: Got false
 
-[34m=== Testing B1: TodoList Architecture ===[0m
-[32m✔ PASS:[0m Add: Count is 3
-[32m✔ PASS:[0m Edit: Status and Title updated
-[32m✔ PASS:[0m Reorganize: Task 3 moved to head
-[32m✔ PASS:[0m Delete: Removed correctly
+=== Testing B1: TodoList Architecture ===
+✔ PASS: Add: Count is 3
+✔ PASS: Edit: Status and Title updated
+✔ PASS: Reorganize: Task 3 moved to head
+✔ PASS: Delete: Removed correctly
 
-[32mALL SYSTEMS OPERATIONAL.[0m
+ALL SYSTEMS OPERATIONAL.
 ```
 
 ## 3. Verification Details

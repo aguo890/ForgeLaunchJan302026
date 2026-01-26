@@ -13,3 +13,7 @@
 *   Updated the QA report to include color-coded terminal output, improving the readability of test results (e.g., pass/fail statuses are now visually distinct).
 *   Automated the maintenance of the QA report by adding logic to insert the latest verification log output and update the report date with each successful test run.
 *   Improved commit safety by making the process contingent on a passing verification suite; the commit will abort if any tests fail.
+
+## [2026-01-26 02:00]
+*   Updated the QA report to remove ANSI color codes from the verification script output, ensuring the log is clean and readable in plain text.
+*   Enhanced the automated commit script to strip ANSI escape sequences from the verification results before logging, improving the clarity of the documentation.

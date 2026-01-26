@@ -171,7 +171,9 @@ def run_verification():
                 encoding='utf-8' # Ensure encoding
             )
             print("✅ Verification Passed.")
-            return result.stdout
+            # Strip ANSI color codes
+            clean_output = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', result.stdout)
+            return clean_output
         except subprocess.CalledProcessError as e:
             print("❌ Verification FAILED. Aborting commit.")
             # Print stderr to show why it failed
