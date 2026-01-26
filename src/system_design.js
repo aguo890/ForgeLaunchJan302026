@@ -25,6 +25,7 @@
  * @property {string} description - Task description.
  * @property {TaskStatusType} status - Current task status.
  * @property {Date} createdAt - Creation timestamp.
+ * @property {Date} updatedAt - Last modification timestamp.
  */
 
 /**
@@ -70,6 +71,7 @@ class Task {
         this.description = description.trim(); // [SAFETY] Input Sanitization
         this.status = TaskStatus.PENDING;
         this.createdAt = new Date();
+        this.updatedAt = new Date(); // [AUDIT] Track modification time
     }
 
     /**
@@ -83,6 +85,7 @@ class Task {
             throw new Error(`Invalid status: ${newStatus}. Must be one of: ${validStatuses.join(', ')}`);
         }
         this.status = newStatus;
+        this.updatedAt = new Date(); // [AUDIT] Update timestamp on change
     }
 }
 
@@ -123,7 +126,8 @@ class TodoList {
             id: task.id,
             description: task.description,
             status: task.status,
-            createdAt: task.createdAt
+            createdAt: task.createdAt,
+            updatedAt: task.updatedAt // [AUDIT] Expose modification trail
         });
     }
 
@@ -177,6 +181,7 @@ class TodoList {
         }
 
         task.description = newDescription.trim();
+        task.updatedAt = new Date(); // [AUDIT] Update timestamp on change
 
         return this._toDTO(task);
     }

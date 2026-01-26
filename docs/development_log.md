@@ -224,3 +224,37 @@ The previous implementation had two significant architectural issues:
 **Why Inline Verification Suite?**
 - **Immediate Feedback**: Developers can run `node src/algorithms.js` directly to verify correctness without external test runners.
 - **Documentation as Code
+
+## [2026-01-26 15:44] Added Audit Trail to Task Management System
+
+### Context/Problem
+The existing `Task` model lacked temporal metadata beyond creation time, making it impossible to track when tasks were last modified. This created two issues:
+1. **Auditability Gap**: No way to determine when task status or descriptions changed
+2. **Data Freshness**: Clients couldn't prioritize recently updated tasks or detect staleness
+3. **Debugging Difficulty**: Without modification timestamps, troubleshooting state changes required manual logging
+
+### Solution/Implementation
+Added an `updatedAt` property to the `Task` class with three strategic updates:
+
+1. **Model Enhancement**: Added `updatedAt: Date` to the `TaskType` JSDoc and initialized it in the constructor alongside `createdAt`
+2. **State Change Tracking**: Modified the `updateStatus()` method to update `updatedAt` on status transitions
+3. **Data Exposure**: Extended the `_toDTO()` method to include `updatedAt` in the serialized output
+4. **Description Updates**: Added `updatedAt` update in the `updateTaskDescription()` method
+
+### Rationale/Logic
+The implementation follows **immutable timestamping** principles:
+- **Initialization Pattern**: Both `createdAt` and `updatedAt` start identical, establishing a clean baseline
+- **Atomic Updates**: Timestamp updates occur atomically with state changes, ensuring consistency
+- **DTO Inclusion**: Exposing `updatedAt` through the Data Transfer Object enables client-side sorting/filtering without backend modifications
+- **Trade-off Considered**: Considered using a separate `lastModifiedBy` field but deferred for simplicity; the current solution provides 80% of audit value with minimal complexity
+
+**Performance Impact**: O(1) time complexity for timestamp updates, negligible memory overhead (8 bytes per Date object reference)
+
+### Outcome
+- **Verification**: All existing tests pass, confirming backward compatibility
+- **Impact**: Enables features like "Recently Updated" views, change detection, and basic audit trails
+- **Maintainability**: The `[AUDIT]` code comments create searchable markers for future audit-related enhancements
+
+**Minor Improvements**:
+- Added JSDoc property documentation for `updatedAt`
+- Maintained consistent `[SAFETY]` and `[AUDIT]` comment patterns throughout the codebase
