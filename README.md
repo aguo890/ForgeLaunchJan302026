@@ -406,7 +406,7 @@ This question asks for a design for "people met in college" covering classes, cl
 #### 4.2.1 Conceptual Analysis: Entities and Relationships
 We must identify the core entities:
 *   **Student (Person)**: The central entity.
-*   **Class (Course)**: An academic offering.
+*   **Course (Class)**: An academic offering.
 *   **Club**: An extracurricular organization.
 
 **Analyzing Relationships**:
@@ -416,7 +416,7 @@ We must identify the core entities:
 #### 4.2.2 Normalization and Redundancy Prevention
 The prompt explicitly asks about "redundancy prevention." This refers to **Database Normalization**.
 *   **1NF (First Normal Form)**: We do not store lists in columns. We do not have a column in the Student table called `Classes_Taken` containing "Math 101, CS 102". This violates atomicity. Instead, we use the `ENROLLMENT` table.
-*   **2NF (Second Normal Form)**: We remove partial dependencies. In `ENROLLMENT`, we don't store the `Professor_Name`. That belongs in the `CLASS` table. Storing it in `ENROLLMENT` would mean if the professor changes, we have to update thousands of enrollment records (redundancy).
+*   **2NF (Second Normal Form)**: We remove partial dependencies. In `ENROLLMENT`, we don't store the `Professor_Name`. That belongs in the `COURSE` table. Storing it in `ENROLLMENT` would mean if the professor changes, we have to update thousands of enrollment records (redundancy).
 *   **3NF (Third Normal Form)**: We remove transitive dependencies. All non-key attributes must rely only on the primary key.
 
 #### 4.2.3 Visual Representation (Mermaid.js)
@@ -425,7 +425,7 @@ The prompt asks for a "flow diagram or visual representation." The following Mer
 ```mermaid
 erDiagram
     STUDENT ||--o{ ENROLLMENT : "enrolls in"
-    CLASS ||--o{ ENROLLMENT : "contains"
+    COURSE ||--o{ ENROLLMENT : "contains"
     STUDENT ||--o{ CLUB_MEMBERSHIP : "joins"
     CLUB ||--o{ CLUB_MEMBERSHIP : "has members"
 
@@ -439,7 +439,7 @@ erDiagram
         int graduation_year
     }
 
-    CLASS {
+    COURSE {
         string course_code PK "e.g., CS-101"
         string course_name
         string professor_name
@@ -473,7 +473,7 @@ erDiagram
 
 #### 4.2.4 Schema Description (Narrative)
 **Organization and Access**:
-The database is organized into three strong entity tables (`STUDENT`, `CLASS`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`). Access is managed via SQL Joins. To retrieve a list of all clubs a specific student belongs to, one would query the `CLUB_MEMBERSHIP` table filtering by `student_id` and joining with the `CLUB` table to fetch names. This structure ensures that queries are optimized for specific access patterns without scanning unrelated data.
+The database is organized into three strong entity tables (`STUDENT`, `COURSE`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`). Access is managed via SQL Joins. To retrieve a list of all clubs a specific student belongs to, one would query the `CLUB_MEMBERSHIP` table filtering by `student_id` and joining with the `CLUB` table to fetch names. This structure ensures that queries are optimized for specific access patterns without scanning unrelated data.
 
 **Relations and Foreign Keys**:
 *   **Primary Keys (PK)**: Every table has a unique identifier (e.g., `student_id`, `club_id`). This ensures row uniqueness.
