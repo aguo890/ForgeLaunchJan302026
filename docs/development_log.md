@@ -164,3 +164,8 @@
 - Added a private `_resetEntropy` function to allow deterministic testing by resetting the module's internal random state.
 - Updated test cases to align with the stricter `isPandigital` validation, ensuring only strings consisting exclusively of digits 0-9 are accepted.
 - Refactored code for better cross-environment compatibility, explicitly resolving the crypto API for both browser and Node.js (including older versions).
+
+## [2026-01-26 05:33]
+- Enhanced cryptographic library detection to support a wider range of Node.js versions, including legacy environments (LTS v14 and below).
+- Implemented a fallback mechanism that adapts the legacy `randomFillSync` API to the standard Web Crypto API, ensuring consistent random number generation.
+- Maintained high-performance random number generation across both browser and Node.js environments.

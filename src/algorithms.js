@@ -19,8 +19,24 @@ let sharedRandomBuffer = null;
 let sharedCursor = BUFFER_SIZE; // Initialize at end to force refill on first use
 
 // Resolve crypto for both Browser and Node.js (CommonJS) environments
-// This ensures the "High-performance" path is used even in older Node.js (v18 and below)
-const cryptoLib = typeof crypto !== 'undefined' ? crypto : (typeof require === 'function' ? require('crypto').webcrypto : undefined);
+// This ensures the "High-performance" path is used even in older Node.js (LTS v14 and below)
+// by adapting the legacy randomFillSync API to look like the standard Web Crypto API.
+let cryptoLib;
+if (typeof crypto !== 'undefined') {
+    cryptoLib = crypto; // Modern Browser / Node 19+
+} else if (typeof require === 'function') {
+    try {
+        const nodeCrypto = require('crypto');
+        // Use webcrypto if available (Node 15+), otherwise adapt legacy randomFillSync
+        // Google/W3C Standard: getRandomValues must return the buffer
+        cryptoLib = nodeCrypto.webcrypto || {
+            getRandomValues: (buf) => {
+                nodeCrypto.randomFillSync(buf);
+                return buf;
+            }
+        };
+    } catch (e) { /* No crypto available */ }
+}
 const useCrypto = !!(cryptoLib && cryptoLib.getRandomValues);
 
 /* -------------------------------------------------------------------------- */
