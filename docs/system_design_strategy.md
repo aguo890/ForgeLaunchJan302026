@@ -234,19 +234,19 @@ erDiagram
 ### 4.1 Architecture Overview
 While the Productivity Tracker demonstrates clean OOP principles, this section explores a high-concurrency distributed system design: a URL Shortener (like bit.ly) capable of handling 100M writes/month.
 
-### 4.2 The \ Base62\ Encoding Strategy
+### 4.2 The "Base62" Encoding Strategy
 A naive approach uses random alphanumeric strings, but this risks collision. A scalable engineering solution utilizes **Base62 Encoding** (A-Z, a-z, 0-9).
 * **Math:** $62^7 \approx 3.5 \text{ Trillion}$ combinations. A 7-character string is sufficient for decades of usage.
 * **ID Generation:** We use a distributed ID generator (e.g., Snowflake) to produce a unique 64-bit integer, then base-convert that integer to Base62. This guarantees uniqueness without checking the DB for collisions.
 
 ### 4.3 High-Performance Reads (Caching Strategy)
 The system is read-heavy (100:1 Read/Write ratio).
-* **Cache-Aside Pattern:** When a user requests short.url/xyz:
+* **Cache-Aside Pattern:** When a user requests `short.url/xyz`:
     1.  Check Redis/Memcached.
     2.  If Miss: Fetch from DB (PostgreSQL/Cassandra), return to user, and write to Cache.
 * **Eviction Policy:** Use **LRU (Least Recently Used)**. Viral links stay hot in memory; obscure links fade to disk storage.
 
 ### 4.4 Optimization: Bloom Filters
-To prevent \Cache Penetration\ (malicious users requesting billions of non-existent keys to hammer the DB), we implement a **Bloom Filter**.
-* **Mechanism:** A probabilistic data structure that tells us if a URL is \definitely not in the set\ or \probably in the set.\
+To prevent "Cache Penetration" (malicious users requesting billions of non-existent keys to hammer the DB), we implement a **Bloom Filter**.
+* **Mechanism:** A probabilistic data structure that tells us if a URL is "definitely not in the set" or "probably in the set."
 * **Impact:** We reject 99% of invalid requests at the memory layer before they ever touch the database disk IO.
