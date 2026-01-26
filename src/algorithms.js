@@ -12,7 +12,6 @@
  * - CORRECTNESS: Implements Fisher-Yates with Crypto.getRandomValues for cryptographic strength.
  * - STATISTICAL INTEGRITY: Uses Rejection Sampling to eliminate modulo bias, ensuring perfect uniformity.
  * - EFFICIENCY: Batches entropy generation to minimize system call overhead.
- * - VERIFICATION: This change should trigger a documentation update in the strategy file.
  */
 
 /**

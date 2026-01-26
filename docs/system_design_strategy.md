@@ -31,89 +31,124 @@ The requirement to "reorganize list" implies moving an item from index A to inde
 ### 2.5 The Solution Code
 ```javascript
 /**
- * SECTION: Productivity Tracker
- * ARCHITECTURE: Headless Object-Oriented Model (MVC Controller)
- * * FEATURES:
- * - Distributed-ready ID generation (Mock UUID).
- * - Enum-based state management.
- * - Input sanitization (trimming strings).
- */
+ * @fileoverview Headless MVC Implementation for Productivity Tracker
+ * Adheres to High-Insight Engineering Standards: 
+ * - Input Sanitization
+ * - Strict State Management (Enums)
+ * - ERROR: Error Boundary Handling
+ * - VERIFICATION: This change triggers a documentation sync to reflect the DTO pattern.
+  */
 
-// Helper: Generates a mock UUID (pseudo-random string)
-// In production, we would use crypto.randomUUID()
-const generateId = () => 
-  '_' + Math.random().toString(36).substr(2, 9);
+// 1. State Integrity: Enum for Task Status
+const TaskStatus = Object.freeze({
+    PENDING: 'pending',
+    IN_PROGRESS: 'in_progress',
+    COMPLETED: 'completed'
+});
 
-const TaskStatus = {
-  TODO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  DONE: 'Done'
-};
-
+// 2. Model: Task (Encapsulation of Data & Validation)
 class Task {
-  constructor(title, description, dueDate) {
-    this.id = generateId(); // Unique ID for distributed readiness
-    this.title = title.trim();
-    this.description = description.trim();
-    this.dueDate = new Date(dueDate);
-    this.status = TaskStatus.TODO;
-    this.createdAt = new Date();
-  }
+    constructor(id, description) {
+        if (!description || typeof description !== 'string' || description.trim() === '') {
+            throw new Error('Task description must be a non-empty string.');
+        }
 
-  update({ title, description, dueDate, status }) {
-    if (title) this.title = title.trim();
-    if (description) this.description = description.trim();
-    if (dueDate) this.dueDate = new Date(dueDate);
-    
-    // Strict validation for Status transitions
-    if (status) {
-      if (Object.values(TaskStatus).includes(status)) {
-        this.status = status;
-      } else {
-        console.warn(`[System] Invalid status attempt: '${status}'`);
-      }
+        this.id = id;
+        this.description = description.trim(); // Input Sanitization
+        this.status = TaskStatus.PENDING;
+        this.createdAt = new Date();
     }
-  }
+
+    updateStatus(newStatus) {
+        const validStatuses = Object.values(TaskStatus);
+        if (!validStatuses.includes(newStatus)) {
+            throw new Error(`Invalid status: ${newStatus}. Must be one of: ${validStatuses.join(', ')}`);
+        }
+        this.status = newStatus;
+    }
 }
 
+// 3. Controller: TodoList (Collection Management)
 class TodoList {
-  constructor() {
-    this.tasks = [];
-  }
-
-  add(title, description, dueDate) {
-    const newTask = new Task(title, description, dueDate);
-    this.tasks.push(newTask);
-    return newTask;
-  }
-
-  delete(id) {
-    const initialLength = this.tasks.length;
-    this.tasks = this.tasks.filter(task => task.id !== id);
-    return this.tasks.length < initialLength; // Returns true if deleted
-  }
-
-  edit(id, updates) {
-    const task = this.tasks.find(t => t.id === id);
-    if (!task) return null;
-    task.update(updates);
-    return task;
-  }
-
-  /**
-   * Reorganizes the list by moving a task from one index to another.
-   * Time Complexity: O(N) due to splice.
-   */
-  reorganize(fromIndex, toIndex) {
-    if (fromIndex < 0 || fromIndex >= this.tasks.length || 
-        toIndex < 0 || toIndex >= this.tasks.length) {
-      console.error("[System] Reorganize failed: Index out of bounds.");
-      return false;
+    constructor() {
+        this.tasksMap = new Map(); // O(1) Read/Write
+        this.taskOrder = [];       // Maintains Sort Order
+        this._idCounter = 1;
     }
-    const [movedTask] = this.tasks.splice(fromIndex, 1);
-    this.tasks.splice(toIndex, 0, movedTask);
-    return true;
-  }
+
+    /**
+     * Creates an immutable Data Transfer Object (DTO).
+     * Prevents external code from modifying the internal Map state by reference.
+     * @param {Task} task - The internal mutable task instance
+     * @returns {Object} - Frozen DTO
+     */
+    _toDTO(task) {
+        return Object.freeze({
+            id: task.id,
+            description: task.description,
+            status: task.status,
+            createdAt: task.createdAt
+        });
+    }
+
+    add(description) {
+        const id = this._idCounter++;
+        const newTask = new Task(id, description);
+
+        // Normalized State: Store by ID, Track Order separately
+        this.tasksMap.set(id, newTask);
+        this.taskOrder.push(id);
+
+        return newTask.id;
+    }
+
+    delete(id) {
+        const deleted = this.tasksMap.delete(id); // O(1)
+        if (deleted) {
+            // O(N) - Necessary cost to maintain array order without holes
+            this.taskOrder = this.taskOrder.filter(taskId => taskId !== id);
+        }
+        return deleted;
+    }
+
+    edit(id, newDescription) {
+        // O(1) Lookup
+        if (!this.tasksMap.has(id)) {
+            throw new Error(`Task with ID ${id} not found.`);
+        }
+
+        const task = this.tasksMap.get(id);
+
+        // Validation
+        if (!newDescription || typeof newDescription !== 'string' || newDescription.trim() === '') {
+            throw new Error('New description must be a non-empty string.');
+        }
+
+        task.description = newDescription.trim();
+
+        // Return Safe DTO
+        return this._toDTO(task);
+    }
+
+    /**
+     * Reorganizes the list by moving a task from one index to another.
+     * @param {number} fromIndex 
+     * @param {number} toIndex 
+     */
+    reorganize(fromIndex, toIndex) {
+        if (fromIndex < 0 || fromIndex >= this.taskOrder.length ||
+            toIndex < 0 || toIndex >= this.taskOrder.length) {
+            throw new RangeError(`Reorganize failed: Index out of bounds.`);
+        }
+
+        const [movedId] = this.taskOrder.splice(fromIndex, 1);
+        this.taskOrder.splice(toIndex, 0, movedId);
+    }
+
+    getAll() {
+        // Map the ID order to actual DTOs
+        return this.taskOrder.map(id => this._toDTO(this.tasksMap.get(id)));
+    }
 }
 ```
 
@@ -191,3 +226,27 @@ erDiagram
 *   **Organization:** The database is organized into three strong entity tables (`STUDENT`, `COURSE`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`).
 *   **Referential Integrity:** Foreign Keys (FK) in the associative tables link back to the strong entities. I utilized Foreign Key constraints with **ON DELETE CASCADE** for the junction tables. This ensures that if a Student record is deleted, their corresponding enrollment and membership records are automatically removed, preventing data integrity issues (orphaned records).
 *   **Redundancy Prevention:** By adhering to 3NF, the `meeting_time` of a club is stored exactly once in the `CLUB` table. If the meeting time changes, we update one record, not every student's record.
+
+---
+
+## 4. Advanced Case Study: Scalable URL Shortener (Bonus)
+
+### 4.1 Architecture Overview
+While the Productivity Tracker demonstrates clean OOP principles, this section explores a high-concurrency distributed system design: a URL Shortener (like bit.ly) capable of handling 100M writes/month.
+
+### 4.2 The \ Base62\ Encoding Strategy
+A naive approach uses random alphanumeric strings, but this risks collision. A scalable engineering solution utilizes **Base62 Encoding** (A-Z, a-z, 0-9).
+* **Math:** $62^7 \approx 3.5 \text{ Trillion}$ combinations. A 7-character string is sufficient for decades of usage.
+* **ID Generation:** We use a distributed ID generator (e.g., Snowflake) to produce a unique 64-bit integer, then base-convert that integer to Base62. This guarantees uniqueness without checking the DB for collisions.
+
+### 4.3 High-Performance Reads (Caching Strategy)
+The system is read-heavy (100:1 Read/Write ratio).
+* **Cache-Aside Pattern:** When a user requests short.url/xyz:
+    1.  Check Redis/Memcached.
+    2.  If Miss: Fetch from DB (PostgreSQL/Cassandra), return to user, and write to Cache.
+* **Eviction Policy:** Use **LRU (Least Recently Used)**. Viral links stay hot in memory; obscure links fade to disk storage.
+
+### 4.4 Optimization: Bloom Filters
+To prevent \Cache Penetration\ (malicious users requesting billions of non-existent keys to hammer the DB), we implement a **Bloom Filter**.
+* **Mechanism:** A probabilistic data structure that tells us if a URL is \definitely not in the set\ or \probably in the set.\
+* **Impact:** We reject 99% of invalid requests at the memory layer before they ever touch the database disk IO.

@@ -3,8 +3,9 @@
  * Adheres to High-Insight Engineering Standards: 
  * - Input Sanitization
  * - Strict State Management (Enums)
- * - Error Boundary Handling
- */
+ * - ERROR: Error Boundary Handling
++ * - VERIFICATION: This change triggers a documentation sync to reflect the DTO pattern.
+  */
 
 // 1. State Integrity: Enum for Task Status
 const TaskStatus = Object.freeze({

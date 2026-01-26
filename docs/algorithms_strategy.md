@@ -124,7 +124,7 @@ By implementing Fisher-Yates, we ensure mathematical correctness. However, a nai
 
 **Quota Management:** To ensure reliability across environments (like Chrome or Node.js) that impose a 65,536-byte limit on `getRandomValues`, we implement **Chunked Filling**. The buffer is filled in safe batches of 16,384 elements, preventing `QuotaExceededError` on large arrays while maintaining the efficiency of batched system calls.
 
-**Statistical Integrity:** The previous implementation acknowledged a negligible modulo bias. The updated implementation eliminates this bias entirely by implementing **Rejection Sampling**. For each index `i`, it defines a `threshold` and discards any random candidate that falls in the non-uniform top segment of the 32-bit range, guaranteeing perfect uniformity in the final distribution. This demonstrates a rigorous, cryptographic-strength approach to random number generation.
+**Statistical Integrity:** The implementation eliminates modulo bias entirely by implementing **Rejection Sampling**. For each index `i`, it defines a `threshold` and discards any random candidate that falls in the non-uniform top segment of the 32-bit range, guaranteeing perfect uniformity in the final distribution. This demonstrates a rigorous, cryptographic-strength approach to random number generation.
 
 ---
 

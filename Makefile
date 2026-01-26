@@ -9,12 +9,20 @@ ifeq (branch,$(firstword $(MAKECMDGOALS)))
   $(eval $(BRANCH_ARGS):;@:)
 endif
 
-.PHONY: push branch test
+.PHONY: push branch test docs smart-push
+
+# Update documentation using AI
+docs:
+	@echo "📚 Updating documentation..."
+	@$(PYTHON_CMD) scripts/update_docs.py
 
 # Push to GitHub (Auto-commit with AI)
 push:
-	@echo "🚀 Running smart push..."
+	@echo "🚀 Running push..."
 	@$(PYTHON_CMD) scripts/autocommit.py
+
+# Update docs and then push
+smart-push: docs push
 # Create a new branch
 branch:
 	@if "$(BRANCH_ARGS)"=="" (echo "⚠️  Usage: make branch <name>" & exit /b 1)
