@@ -1,4 +1,4 @@
-================================================================================
+﻿================================================================================
 PART 0: ENGINEERING CONTEXT & META INFORMATION
 ================================================================================
 
@@ -25,9 +25,11 @@ RESOURCES USED:
 - The Forge Prompt (Challenge requirements)
 
 COURSES TAKEN:
-- [Your University/Equivalent] Data Structures & Algorithms
-- [Your University/Equivalent] Database Management Systems
-- [Relevant Online Course if any, e.g. Full Stack Open]
+- CSCI 1112: Algorithms & Data Structures
+- CSCI 2541W: Database Systems & Team Projects
+- CSCI 2113: Software Engineering
+- CSCI 3212: Algorithms
+- CSCI 4907: Big Data & Analytics
 
 ================================================================================
 PART A: ALGORITHMS (Group A)
@@ -203,6 +205,7 @@ class Task {
     this.dueDate = new Date(dueDate);
     this.status = TaskStatus.TODO;
     this.createdAt = new Date();
+    this.updatedAt = new Date(); // [AUDIT] Track modification time
   }
 
   update({ title, description, dueDate, status }) {
@@ -218,6 +221,8 @@ class Task {
         console.warn(`[System] Invalid status attempt: '${status}'`);
       }
     }
+    
+    this.updatedAt = new Date(); // [AUDIT] Update timestamp on change
   }
 }
 
@@ -246,9 +251,10 @@ class TodoList {
   }
 
   reorganize(fromIndex, toIndex) {
-    if (fromIndex < 0 || fromIndex >= this.tasks.length || 
-        toIndex < 0 || toIndex >= this.tasks.length) {
-      throw new RangeError(`Reorganize failed: Index out of bounds.`);
+    const len = this.tasks.length;
+    if (fromIndex < 0 || fromIndex >= len || 
+        toIndex < 0 || toIndex >= len) {
+      throw new RangeError(`Reorganize failed: Index ${fromIndex} or ${toIndex} is out of bounds (valid: 0..${len - 1}).`);
     }
     const [movedTask] = this.tasks.splice(fromIndex, 1);
     this.tasks.splice(toIndex, 0, movedTask);
@@ -352,11 +358,15 @@ PART C: ESSAYS
 
 ESSAY 1: THE HIDDEN TRAIT (150 Words)
 --------------------------------------------------------------------------------
-While my resume highlights my academic achievements, it doesn't capture my dedication to the art of sourdough baking—a hobby that has unexpectedly sharpened my engineering mindset. Baking, much like coding, is a science of variables: temperature, hydration, and timing must be precisely controlled. When I first started, my loaves were dense and unappealing. Instead of quitting, I treated each failure as a debugging session, documenting variables and iterating on my process. This practice has taught me patience and the importance of analyzing failure without judgment. It has also instilled in me a love for community; there is no greater joy than breaking bread I’ve made with friends. I bring this same iterative resilience and community focus to my technical teams, understanding that the best products, like the best bread, require patience, precision, and a willingness to learn from every mistake.
+While my resume highlights the algorithms I built for China Fun Restaurants, it doesn't capture the reality of the years I spent managing the floor. You won't see the nights spent calming angry customers during a dinner rush, mediating disputes between kitchen staff, or scrubbing fryers when we were short-staffed.
+
+This experience gave me a "service-first" engineering philosophy. When I built the inventory forecasting model, I wasn't just optimizing a Python script; I was trying to save the prep cooks from staying late to throw away unused food. I learned that the best software doesn't just run efficiently; it respects the labor of the people using it. This background has made me an engineer who prioritizes user empathy and operational reality just as much as Big O notation. I build tools to solve human problems, not just technical ones.
 
 ESSAY 2: INTERNSHIP INTENT (150 Words)
 --------------------------------------------------------------------------------
-I am seeking an internship that functions as a bridge between academic theory and real-world impact. In the classroom, assignments often exist in a vacuum, but I am eager to contribute to software that solves tangible problems for actual users. Specifically, I am looking for an environment that balances mentorship with autonomy—a place where I can learn architectural best practices from senior engineers while being trusted to own the implementation of specific features. Forge’s mission to empower students to do good resonates with me; I want to work with a company that views technology not just as a tool for profit, but as a lever for social change. Ultimately, I am looking for a challenge that will push me out of my comfort zone and a community that will support me as I grow into a professional engineer.
+I have frequently worn the hat of "Lead Engineer" out of necessity, architecting full-stack solutions for my startup and internships. However, I am seeking an internship to experience the rigor of an established engineering culture. When you build alone, you can move fast, but you often miss the blind spots that only a senior engineer's code review can reveal.
+
+I am looking for an environment where "it works" is not the bar for success—where maintainability, scalability, and clean code principles are enforced. I want to have my design patterns challenged by mentors who have seen systems fail at a scale I haven't touched yet. My goal is to transition from being a capable "builder" to a disciplined "engineer," learning the industry standards that turn a working prototype into reliable, long-term software infrastructure.
 
 TECHNICAL INSIGHT: OPTIMIZATION STRATEGY
 --------------------------------------------------------------------------------
