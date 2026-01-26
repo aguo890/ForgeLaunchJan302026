@@ -139,23 +139,24 @@ const shuffleArray = (array) => {
 const isPandigital = (input) => {
     if (input == null) return false;
 
+    let str;
+
     // Fast path: Number checks
     if (typeof input === 'number') {
-        // Optimization: Small numbers cannot be pandigital (must be >= 1023456789)
+        // Optimization: Small numbers cannot be pandigital
         if (input < 1023456789) return false;
-
         // SAFETY: If the number is too large, JS has ALREADY corrupted the digits.
         if (!Number.isSafeInteger(input)) return false;
 
-        const strVal = String(input);
-        // Scientific notation (e.g. 1e21) is not a valid pandigital sequence
-        if (strVal.includes('e')) return false;
-
-        return checkStringBitmask(strVal);
+        str = String(input);
+        if (str.includes('e')) return false;
+    } else {
+        str = String(input);
     }
 
-    const str = String(input);
-    if (str.length < 10) return false;
+    // STRICTNESS GUARD: A 0-9 pandigital number must be exactly 10 digits.
+    // This provides O(1) rejection for long strings and ensures strict permutation.
+    if (str.length !== 10) return false;
 
     return checkStringBitmask(str);
 };

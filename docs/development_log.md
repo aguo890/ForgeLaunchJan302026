@@ -169,3 +169,8 @@
 - Enhanced cryptographic library detection to support a wider range of Node.js versions, including legacy environments (LTS v14 and below).
 - Implemented a fallback mechanism that adapts the legacy `randomFillSync` API to the standard Web Crypto API, ensuring consistent random number generation.
 - Maintained high-performance random number generation across both browser and Node.js environments.
+
+## [2026-01-26 05:39]
+- **Enhanced `isPandigital` function** to enforce strict length validation, requiring exactly 10 digits for 0-9 pandigital numbers, improving accuracy and performance.
+- **Updated test suite** to reflect new strict behavior, ensuring long strings and repeated sequences are correctly rejected.
+- **Optimized input handling** by consolidating string conversion logic and adding early rejection for invalid lengths.

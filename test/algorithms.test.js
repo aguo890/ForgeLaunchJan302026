@@ -63,7 +63,7 @@ describe('isPandigital', () => {
     it('should return true for valid 0-9 pandigital numbers (string)', () => {
         assert.strictEqual(isPandigital('0123456789'), true);
         assert.strictEqual(isPandigital('9876543210'), true);
-        assert.strictEqual(isPandigital('10234567891023456789'), true); // Repeats allowed
+        assert.strictEqual(isPandigital('10234567891023456789'), false); // Repeats NOT allowed (Length check)
     });
 
     it('should return true for valid 0-9 pandigital numbers (number)', () => {
@@ -83,8 +83,8 @@ describe('isPandigital', () => {
     });
 
     it('should correctly handle large "integers" passed as strings', () => {
-        // 10234567890123456789 is fine as string
-        assert.strictEqual(isPandigital('10234567890123456789'), true);
+        // 10234567890123456789 is fine as string but > 10 chars
+        assert.strictEqual(isPandigital('10234567890123456789'), false);
     });
     it('should return FALSE for strings that happen to look like scientific notation (mixed characters)', () => {
         // "1e234567890" contains all digits 0-9 but also 'e'.
