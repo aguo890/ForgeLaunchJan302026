@@ -126,11 +126,11 @@ The prompt asks for a design for "people met in college" covering classes, clubs
 
 **Core Entities:**
 *   `STUDENT` (The central entity)
-*   `CLASS` (Academic course)
+*   `COURSE` (Academic course)
 *   `CLUB` (Extracurricular)
 
 **Relationship Analysis:**
-*   **Student ↔ Class:** A student takes many classes; a class has many students. **(Many-to-Many / M:N)**
+*   **Student ↔ Course:** A student takes many courses; a course has many students. **(Many-to-Many / M:N)**
 *   **Student ↔ Club:** A student joins many clubs; a club has many members. **(Many-to-Many / M:N)**
 
 **Crucial Insight:** In relational databases, M:N relationships *cannot* be represented directly. They require a **Junction Table** (Associative Entity).
@@ -138,7 +138,7 @@ The prompt asks for a design for "people met in college" covering classes, clubs
 ### 3.2 Normalization (Redundancy Prevention)
 The prompt explicitly asks about "redundancy prevention." This refers to **Database Normalization (3NF)**.
 *   **1NF (First Normal Form):** We do not store lists in columns. No `Classes_Taken` column with "Math 101, CS 102". We use a junction table.
-*   **2NF (Second Normal Form):** Check for partial dependencies. We don't store `Professor_Name` in the `ENROLLMENT` table. That belongs in `CLASS`.
+*   **2NF (Second Normal Form):** Check for partial dependencies. We don't store `Professor_Name` in the `ENROLLMENT` table. That belongs in `COURSE`.
 *   **3NF (Third Normal Form):** Transitive dependencies removed.
 *   **Data Privacy (PII):** Although not explicitly requested, a production schema storing student emails would require encryption at rest (e.g., AES-256) to comply with GDPR/CCPA standards. The `email` index would operate on a hashed value (e.g., SHA-256) to allow lookups without exposing raw data.
 
@@ -148,7 +148,7 @@ The following Entity-Relationship Diagram (ERD) visualizes this schema.
 ```mermaid
 erDiagram
     STUDENT ||--o{ ENROLLMENT : "enrolls in"
-    CLASS ||--o{ ENROLLMENT : "contains"
+    COURSE ||--o{ ENROLLMENT : "contains"
     STUDENT ||--o{ CLUB_MEMBERSHIP : "joins"
     CLUB ||--o{ CLUB_MEMBERSHIP : "has members"
 
@@ -159,7 +159,7 @@ erDiagram
         string email "UNIQUE INDEX"
     }
 
-    CLASS {
+    COURSE {
         string course_code PK "e.g., CS-101"
         string course_name
         string professor_name
@@ -188,6 +188,6 @@ erDiagram
 ```
 
 ### 3.4 Schema Description (Narrative)
-*   **Organization:** The database is organized into three strong entity tables (`STUDENT`, `CLASS`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`).
+*   **Organization:** The database is organized into three strong entity tables (`STUDENT`, `COURSE`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`).
 *   **Referential Integrity:** Foreign Keys (FK) in the associative tables link back to the strong entities. I utilized Foreign Key constraints with **ON DELETE CASCADE** for the junction tables. This ensures that if a Student record is deleted, their corresponding enrollment and membership records are automatically removed, preventing data integrity issues (orphaned records).
 *   **Redundancy Prevention:** By adhering to 3NF, the `meeting_time` of a club is stored exactly once in the `CLUB` table. If the meeting time changes, we update one record, not every student's record.

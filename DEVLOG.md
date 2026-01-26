@@ -72,3 +72,8 @@
 *   Enhanced the project's meta-information section to include a clear engineering philosophy, outlining core principles such as immutability, distributed-ready ID generation, and a performance-first architecture.
 *   Updated the database design documentation to consistently use the term "COURSE" instead of "CLASS" across entity descriptions, relationship diagrams, and schema narratives, improving terminology clarity.
 *   Refined the normalization examples within the database section to align with the updated entity naming, ensuring technical accuracy in describing redundancy prevention.
+
+## [2026-01-26 04:17]
+*   Standardized the naming of the academic entity from `CLASS` to `COURSE` across all documentation and diagrams for improved clarity and consistency.
+*   Updated the Entity-Relationship Diagram (ERD) and narrative descriptions to reflect the `COURSE` entity, ensuring all references to academic courses are uniform.
+*   Maintained the integrity of the database schema's relationships, normalization principles, and referential integrity constraints throughout the changes.
