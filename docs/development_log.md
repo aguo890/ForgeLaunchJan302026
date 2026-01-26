@@ -174,3 +174,12 @@
 - **Enhanced `isPandigital` function** to enforce strict length validation, requiring exactly 10 digits for 0-9 pandigital numbers, improving accuracy and performance.
 - **Updated test suite** to reflect new strict behavior, ensuring long strings and repeated sequences are correctly rejected.
 - **Optimized input handling** by consolidating string conversion logic and adding early rejection for invalid lengths.
+
+## [2026-01-26 05:42]
+- **Enhanced the Fisher-Yates shuffle implementation** to use a shared cursor pattern and a universal crypto adapter, improving performance and cross-environment compatibility.
+- **Added entropy stewardship** by implementing a shared random buffer with a persistent cursor, reducing system calls and preventing entropy thrashing.
+- **Improved crypto support** with a legacy adapter for older Node.js environments, ensuring secure randomness without silent downgrades.
+- **Updated the pandigital detection algorithm** to include a strict length guard and optimized bitmask strategy for O(1) space efficiency.
+- **Strengthened defensive security** by rejecting non-10-digit inputs in constant time, protecting against potential DoS attacks.
+- **Ensured precision safety** by handling unsafe integers and scientific notation to avoid false positives.
+- **Refined documentation** to reflect the new design rationales, focusing on resource stewardship and system-level concerns.

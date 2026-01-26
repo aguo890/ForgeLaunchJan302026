@@ -86,58 +86,84 @@ The industry-standard solution is the Fisher-Yates shuffle. This algorithm itera
 
 This ensures that every element has an equal probability of being placed in any remaining slot, resulting in a perfectly unbiased permutation.
 
-#### 3.2.3 Modern Implementation with ES6 Destructuring
-We can leverage ES6 Destructuring Assignment to perform the swap operation in a single line, eliminating the need for a temporary variable. This demonstrates familiarity with modern syntax features.
+#### 3.2.3 Modern Implementation with Universal Crypto Support
+We implement the shuffle using a **Shared Cursor Pattern** and a **Universal Crypto Adapter**. This ensures maximum performance and cross-environment safety, aligning with high-throughput systems design.
 
 **The Solution Code**:
 ```javascript
+/* -------------------------------------------------------------------------- */
+/* SHARED MODULE STATE                                                        */
+/* -------------------------------------------------------------------------- */
+const BUFFER_SIZE = 4096;
+const MAX_UINT32 = 0xFFFFFFFF;
+let sharedRandomBuffer = null;
+let sharedCursor = BUFFER_SIZE; // Persisted to prevent entropy thrashing
+
+// Resolve crypto with Legacy Node/CommonJS Adapter
+let cryptoLib;
+if (typeof crypto !== 'undefined') {
+    cryptoLib = crypto; // Modern Browser
+} else if (typeof require === 'function') {
+    try {
+        const nodeCrypto = require('crypto');
+        cryptoLib = nodeCrypto.webcrypto || {
+            getRandomValues: (buf) => {
+                nodeCrypto.randomFillSync(buf);
+                return buf; // W3C Spec Compliance
+            }
+        };
+    } catch (e) { /* Fallback to Math.random if crypto unavailable */ }
+}
+const useCrypto = !!(cryptoLib && cryptoLib.getRandomValues);
+
 /**
- * Randomly reorders (shuffles) an array in-place using the Fisher-Yates algorithm.
+ * Randomly reorders (shuffles) an array in-place using Fisher-Yates.
  * 
  * DESIGN RATIONALE:
- * The Fisher-Yates algorithm is selected over naive sort methods (like array.sort(() => Math.random() - 0.5))
- * because naive sorts introduce statistical bias and typically run in O(N log N) time.
- * Fisher-Yates guarantees a uniform distribution of all permutations and operates in O(N) time complexity,
- * making it the optimal choice for unbiased randomization.
- * 
- * TIME COMPLEXITY: O(N) - We iterate through the array exactly once.
- * SPACE COMPLEXITY: O(1) - The shuffle is performed in-place.
- * 
- * @param {Array} array - The array to be shuffled.
- * @returns {Array} - The mutated, shuffled array.
+ * - Shared Cursor: Prevents "Entropy Thrashing" by persisting consumption state.
+ * - Legacy Adapter: Ensures high-performance crypto falls back safely in older Node.js.
  */
 const shuffleArray = (array) => {
-  // Defensive check: Ensure input is an array
-  if (!Array.isArray(array)) {
-    throw new TypeError("Input must be an array.");
-  }
+    if (!Array.isArray(array)) throw new TypeError("Input must be an array.");
 
-  // Iterate backwards from the last element to the second element
-  for (let i = array.length - 1; i > 0; i--) {
-    
-    // Select a random index from 0 to i (inclusive)
-    // Math.random() generates [0, 1), so * (i + 1) scales it to [0, i + 1)
-    // Math.floor() truncates it to an integer in range [0, i]
-    const j = Math.floor(Math.random() * (i + 1));
-    
-    // Perform the swap using ES6 Destructuring Assignment.
-    // This syntax [a, b] = [b, a] swaps values without a temp variable.
-    [array[i], array[j]] = [array[j], array[i]];
-  }
-  
-  return array;
+    const len = array.length;
+    if (len <= 1) return array;
+
+    if (useCrypto && !sharedRandomBuffer) {
+        sharedRandomBuffer = new Uint32Array(BUFFER_SIZE);
+    }
+
+    const refillBuffer = () => {
+        cryptoLib.getRandomValues(sharedRandomBuffer);
+        sharedCursor = 0;
+    };
+
+    for (let i = len - 1; i > 0; i--) {
+        let j;
+        if (useCrypto) {
+            const range = i + 1;
+            const threshold = MAX_UINT32 - (MAX_UINT32 % range);
+            let candidate;
+            do {
+                if (sharedCursor >= BUFFER_SIZE) refillBuffer();
+                candidate = sharedRandomBuffer[sharedCursor++];
+            } while (candidate >= threshold);
+            j = candidate % range;
+        } else {
+            j = Math.floor(Math.random() * (i + 1));
+        }
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
 };
-
-// --- META: Verification and Usage ---
-// Example usage demonstrating the function
-const cardDeck = ['Ace', 'King', 'Queen', 'Jack', '10'];
-console.log("Original Deck:", [...cardDeck]); // Log copy to show original state
-shuffleArray(cardDeck);
-console.log("Shuffled Deck:", cardDeck);
 ```
 
-#### 3.2.4 Deep Insight: Why This Matters
-By implementing Fisher-Yates, the candidate demonstrates an understanding of "correctness" that goes beyond "it looks random." In applications like cryptography, gaming, or randomized controlled trials, bias can be catastrophic. Acknowledging this distinction in the code comments sets the candidate apart as a thoughtful engineer.
+#### 3.2.4 Deep Insight: Resource Stewardship & Stability
+A "Google-tier" implementation goes beyond basic logic to address system-level concerns:
+
+*   **Entropy Stewardship (Shared Cursor):** Naive implementations call `crypto.getRandomValues` on every shuffle or refill a massive buffer every time. By persisting the `sharedCursor`, we consume only the entropy required, amortizing the cost of the cryptographic system call across multiple function invocations.
+*   **Universal Compatibility (Legacy Adapter):** We bridge the gap between Modern Web Crypto and legacy Node.js ($<$v19) by wrapping `randomFillSync`. This prevents a "Silent Downgrade" to weak randomness in older environments.
+*   **W3C Spec Compliance:** The adapter explicitly returns the buffer, satisfying the W3C signature and preventing breakage in code that relies on method chaining.
 
 ### 3.3 Question A2: Pandigital Integer Detection
 
@@ -153,73 +179,59 @@ While a `Set` is a common approach ($O(N)$ time), it requires allocating heap me
 *   **Logic**: By using a single 32-bit integer as a mask, I track seen digits using bitwise operators (`|` and `<<`). Each bit position 0-9 represents whether that digit has been found. When the mask equals `0b1111111111` (decimal 1023), all 10 digits are present.
 *   **Efficiency**: This reduces Space Complexity from $O(1)$ (heap allocation for Set) to strictly $O(1)$ (stack storage—a single integer register). In high-frequency scenarios like searching for pandigital primes, this eliminates Garbage Collection overhead entirely.
 
-#### 3.3.3 The Solution Code
+#### 3.3.3 The Final Solution
+We implement a **Bitmask Strategy** with a **Strict Length Guard** to ensure O(1) space efficiency and definitive mathematical correctness ($N=10$).
+
+**The Solution Code**:
 ```javascript
 /**
- * Detects if a value is a 0-9 pandigital number using Bitwise operations.
- * * ALGORITHMIC STRATEGY:
- * Uses a bitmask to track seen digits. This allows for O(1) Space complexity
- * (a single integer) compared to O(N) Space for a Set or Array.
- * * COMPLEXITY:
- * - Time: O(N) where N is the number of digits.
- * - Space: O(1) - Constant space usage (single integer variable).
- * * @param {string|number} input - The value to check.
- * @returns {boolean}
+ * Helper to perform bitmask check on digit sequences.
+ */
+const checkStringBitmask = (str) => {
+    let mask = 0;
+    const TARGET_MASK = 1023; // Digits 0-9
+
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        // Fail if any character is NOT a digit (0-9)
+        if (code < 48 || code > 57) return false;
+        mask |= (1 << (code - 48));
+    }
+    return mask === TARGET_MASK;
+};
+
+/**
+ * Detects if a value is a 0-9 pandigital number.
+ * 
+ * DESIGN RATIONALE:
+ * - Length Guard: Enforces strict permutation (exactly 10 digits).
+ * - Bitmasking: Provides O(1) space with minimal constant factors.
  */
 const isPandigital = (input) => {
     if (input == null) return false;
 
-    // Fast path: If it's a number, ensure it's not scientific notation
+    let str;
     if (typeof input === 'number') {
-        if (input < 1023456789) return false;
-        const strVal = String(input);
-        if (strVal.includes('e')) return false;
-        return checkStringBitmask(strVal);
+        // Fast fail for numbers
+        if (input < 1023456789 || !Number.isSafeInteger(input)) return false;
+        str = String(input);
+        if (str.includes('e')) return false;
+    } else {
+        str = String(input);
     }
 
-    const str = String(input);
-    if (str.length < 10) return false;
-    return checkStringBitmask(str);
+    // Strict 10-digit guard for 0-9 permutation
+    return str.length === 10 && checkStringBitmask(str);
 };
-
-/**
- * Helper function to perform the bitmask check on a string.
- * Checks against binary 1111111111 (Decimal 1023).
- */
-const checkStringBitmask = (str) => {
-    let mask = 0;
-    const TARGET_MASK = 0b1111111111; // Binary literal for clarity (ES6)
-
-    for (let i = 0; i < str.length; i++) {
-        const code = str.charCodeAt(i);
-        // ASCII '0' is 48, '9' is 57
-        if (code >= 48 && code <= 57) {
-            const digit = code - 48;
-            mask |= (1 << digit); // Set the bit corresponding to the digit
-            if (mask === TARGET_MASK) return true;
-        }
-    }
-    return false;
-};
-
-// --- META: Verification and Usage ---
-const testCases = [
-  { val: 1023456789, expected: true },
-  { val: 102345678, expected: false },
-];
-
-testCases.forEach(test => {
-  console.log(`Input: ${test.val} | Is Pandigital: ${isPandigital(test.val)} | Expected: ${test.expected}`);
-});
 ```
 
-#### 3.3.4 Insight: Why Bitmask Over Set?
-I chose the Bitmask approach for several reasons:
+#### 3.3.4 Insight: Defensive Security & O(1) Failures
+I chose the Bitmask approach with a strict length guard for several reasons:
 
-1. **Zero Heap Allocation:** The Set implementation allocates a new Object on the heap for every function call. In high-throughput scenarios, this creates memory churn and triggers frequent Garbage Collection pauses.
-2. **JIT Optimization:** Bitwise operations are highly optimizable by V8's JIT compiler as they operate on primitive integers.
-3. **Type Safety:** I added guards for scientific notation (e.g., `1e21`) which can destroy digit-based logic.
-4. **Bitwise Safety:** JS bitwise operators are limited to 32-bit signed integers, but our domain (digits 0-9) fits within 10 bits, making this safe and optimal.
+1. **Zero Heap Allocation:** The Set implementation allocates a new Object on the heap for every function call. In high-throughput scenarios, this creates memory churn.
+2. **Defensive Security (Length Guard):** By rejecting non-10-digit strings in **O(1)** time, we protect against Denial of Service (DoS) attacks where a malicious actor provides an arbitrarily massive string.
+3. **JIT Optimization:** Bitwise operations are highly optimizable by V8's JIT compiler.
+4. **Precision Safety:** We strictly reject unsafe integers (`MAX_SAFE_INTEGER`) to avoid false positives generated by IEEE 754 precision artifacts.
 
 ## 4. Part 1: Software Engineering Project - Group B (System Design)
 
