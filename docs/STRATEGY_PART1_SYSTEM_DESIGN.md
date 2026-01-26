@@ -189,5 +189,5 @@ erDiagram
 
 ### 3.4 Schema Description (Narrative)
 *   **Organization:** The database is organized into three strong entity tables (`STUDENT`, `CLASS`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`).
-*   **Referential Integrity:** Foreign Keys (FK) in the associative tables link back to the strong entities. You cannot enroll a non-existent student.
+*   **Referential Integrity:** Foreign Keys (FK) in the associative tables link back to the strong entities. I utilized Foreign Key constraints with **ON DELETE CASCADE** for the junction tables. This ensures that if a Student record is deleted, their corresponding enrollment and membership records are automatically removed, preventing data integrity issues (orphaned records).
 *   **Redundancy Prevention:** By adhering to 3NF, the `meeting_time` of a club is stored exactly once in the `CLUB` table. If the meeting time changes, we update one record, not every student's record.
