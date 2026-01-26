@@ -191,3 +191,36 @@ The refactored documentation structure:
 **Outcome**: 
 - Repository is cleaner without generated test artifacts
 - A test failure has been identified: `TodoList.reorganize` throws a `RangeError` with a descriptive message that doesn't match the test's expected pattern. This needs investigation to determine whether to fix the test expectation or the error message format.
+
+## [2026-01-26 15:25] Major Refactor: Algorithm Module Encapsulation & System Design Foundation
+
+### 1. Context/Problem
+The previous implementation had two significant architectural issues:
+
+1. **Module Pollution**: The `algorithms.js` module exposed internal state (`sharedRandomBuffer`, `sharedCursor`) at the module scope, violating encapsulation principles and creating potential for external mutation.
+
+2. **Inconsistent Error Handling**: The system design module lacked proper type definitions, input validation, and comprehensive error boundaries, making it fragile for production use.
+
+### 2. Solution/Implementation
+
+#### For `algorithms.js`:
+- **Encapsulated State**: Wrapped the `shuffleArray` function in an **IIFE (Immediately Invoked Function Expression)** to create a private closure scope for the entropy buffer and cursor.
+- **Modern Crypto Resolution**: Simplified crypto detection using `globalThis.crypto` with fallback logic, removing the complex conditional branching.
+- **Self-Contained Verification**: Added an inline test suite that runs only when the module is executed directly, providing immediate integrity verification.
+- **Cleaner Exports**: Maintained the `_resetEntropy` method but attached it directly to the shuffle function.
+
+#### For `system_design.js`:
+- **Type Safety Foundation**: Added comprehensive JSDoc `@typedef` definitions for `TaskDTO`, `TaskUpdateDTO`, and `TaskStatusType`.
+- **Structured Architecture**: Organized the code into clear sections (Type Definitions, State Integrity, Model) with descriptive headers.
+- **Input Sanitization**: Prepared the groundwork for validation in the Task class constructor (though implementation appears incomplete in the diff).
+
+### 3. Rationale/Logic
+
+**Why IIFE for shuffleArray?**
+- **Encapsulation**: The entropy buffer and cursor are now truly private, inaccessible from outside the module. This prevents accidental or malicious interference with the random number generation state.
+- **Memory Efficiency**: Maintains the **Static Singleton Buffer** pattern (O(1) memory allocation) while eliminating module pollution.
+- **Testability**: The `_resetEntropy` method remains accessible for deterministic testing, but is now a property of the function itself rather than a separate export.
+
+**Why Inline Verification Suite?**
+- **Immediate Feedback**: Developers can run `node src/algorithms.js` directly to verify correctness without external test runners.
+- **Documentation as Code
