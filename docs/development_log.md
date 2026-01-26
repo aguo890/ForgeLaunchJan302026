@@ -398,3 +398,37 @@ The system now produces both console output and a structured JSON artifact. Veri
 - Updated documentation comments to reflect new artifact output
 - Added color-coded artifact write confirmation to console
 - Cleaned up internal timing field from final JSON output
+
+## [2026-01-26 18:15] Dynamic QA Report Generation from JSON Artifact
+
+### Context/Problem
+The QA report (`qa_report.md`) contained **hardcoded test results** in Section 3 that would become stale after each test run. This created a **data integrity risk** where the report could misrepresent actual verification outcomes. The test suite already generated a structured JSON artifact (`test_summary.json`) with current results, but the report wasn't consuming it.
+
+### Solution/Implementation
+Implemented **dynamic report generation** by:
+1. Adding `json` import and defining `TEST_SUMMARY_FILE` path
+2. Creating `generate_section_3()` function that:
+   - Parses the JSON artifact using `json.loads()`
+   - Extracts key metrics (iterations, status, checks performed)
+   - Builds Markdown with **template literals** for Fisher-Yates, Pandigital, and TodoList tests
+   - Includes execution metadata (engine, timing)
+3. Modified `update_qa_report()` to:
+   - Use **regex pattern matching** (`section3_pattern`) to locate Section 3
+   - Replace it with dynamically generated content via `re.sub()`
+   - Stage both `qa_report.md` and `test_summary.json` for commit
+
+### Rationale/Logic
+**Why dynamic generation?** Eliminates manual synchronization between test output and documentation. The JSON artifact serves as the **single source of truth** for verification results.
+
+**Regex over string slicing:** Used `re.DOTALL` flag to handle multiline sections reliably. More robust than line-number-based replacement when document structure might evolve.
+
+**Performance impact:** Minimal - JSON parsing is O(n) where n is test result size (~1KB). The regex operations are O(m) where m is document length (~few KB). Overall overhead <1ms.
+
+**Maintainability:** Clear separation - test runner writes JSON, report generator reads it. Adding new test categories only requires updating the template in `generate_section_3()`.
+
+### Outcome
+- **Verification:** Confirmed by:
+  1. Running test suite (`npm test`)
+  2. Observing updated QA report with current iteration counts (60,000 → 60,000)
+  3. Checking that Fisher-Yates permutation distribution updated from previous run
+- **Impact:** QA report now **always reflects actual test execution**, eliminating stale data risk

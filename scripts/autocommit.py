@@ -3,12 +3,14 @@ import subprocess
 import sys
 import datetime
 import re
+import json
 from pathlib import Path
 
 # Setup paths
 SCRIPT_DIR = Path(__file__).parent
 ROOT_DIR = SCRIPT_DIR.parent
-DEVLOG_FILE = ROOT_DIR / "docs" / "development_log.md"  # <--- New Log File Path
+DEVLOG_FILE = ROOT_DIR / "docs" / "development_log.md"
+TEST_SUMMARY_FILE = ROOT_DIR / "docs" / "test_summary.json"
 
 try:
     from dotenv import load_dotenv
@@ -115,11 +117,66 @@ def generate_commit_message(client, diff, files):
         print(f"⚠️  Generation failed: {e}")
         return "wip: update (generation failed)"
 
+def generate_section_3():
+    """
+    Reads the JSON artifact and builds dynamic Markdown for Section 3.
+    This ensures Section 3 never lies about the actual test parameters.
+    """
+    if not TEST_SUMMARY_FILE.exists():
+        return "## 3. Verification Details\n\n*No structured test data found.*\n"
+    
+    try:
+        data = json.loads(TEST_SUMMARY_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, Exception) as e:
+        return f"## 3. Verification Details\n\n*Failed to parse test artifact: {e}*\n"
+    
+    md = "## 3. Verification Details\n\n"
+    
+    # 3.1 Algorithmic Integrity
+    md += "### 3.1 Algorithmic Integrity\n\n"
+    
+    # Fisher-Yates
+    if "fisher_yates" in data.get("tests", {}):
+        fy = data["tests"]["fisher_yates"]
+        iterations = fy.get("iterations", "N/A")
+        status = fy.get("status", "UNKNOWN")
+        comment = fy.get("checks", [{}])[0].get("comment", "No comment")
+        md += f"* **Fisher-Yates Shuffle:** Ran {iterations:,} iterations. Result: {comment}. ({status})\n"
+    
+    # Pandigital
+    if "pandigital" in data.get("tests", {}):
+        pd = data["tests"]["pandigital"]
+        total_cases = pd.get("total_cases", "N/A")
+        status = pd.get("status", "UNKNOWN")
+        md += f"* **Pandigital Detection:** Validated {total_cases} edge cases using Set-based logic. ({status})\n"
+    
+    # 3.2 System Architecture
+    md += "\n### 3.2 System Architecture\n\n"
+    
+    if "todo_list" in data.get("tests", {}):
+        todo = data["tests"]["todo_list"]
+        checks = todo.get("checks_performed", [])
+        final_count = todo.get("final_task_count", "N/A")
+        status = todo.get("status", "UNKNOWN")
+        checks_str = ", ".join(checks) if checks else "None"
+        md += f"* **Headless MVC:** Validated {len(checks)} distinct state checks: {checks_str}. ({status})\n"
+        md += f"* **Encapsulation:** State Guard prevented invalid status transitions.\n"
+    
+    # Meta info
+    meta = data.get("meta", {})
+    if meta:
+        engine = meta.get("engine", "Unknown")
+        exec_time = meta.get("execution_time_ms", "N/A")
+        md += f"\n*Executed on {engine} in {exec_time}ms.*\n"
+    
+    return md
+
 def update_qa_report(log_output, success):
     """
     Updates the QA_REPORT.md file with the new verification log, date, and result.
     Uses Regex for robust replacement rather than brittle string slicing.
     Records BOTH success and failure states for accurate observability.
+    Dynamically generates Section 3 from JSON artifact.
     """
     qa_file = ROOT_DIR / "docs" / "qa_report.md"
     if not qa_file.exists():
@@ -147,7 +204,14 @@ def update_qa_report(log_output, success):
         new_log_block = f"```text\n{clean_log.strip()}\n```"
         content = re.sub(log_pattern, new_log_block, content, flags=re.DOTALL)
 
-        # 3. Update Conclusion Signature (Dynamic Status)
+        # 3. Update Section 3 dynamically from JSON artifact
+        section3_pattern = r"(## 3\. Verification Details.*?)(## 4\. Conclusion)"
+        new_section_3 = generate_section_3()
+        if re.search(section3_pattern, content, re.DOTALL):
+            content = re.sub(section3_pattern, f"{new_section_3}\n\\2", content, flags=re.DOTALL)
+            print("📊 Section 3 updated dynamically from JSON artifact.")
+
+        # 4. Update Conclusion Signature (Dynamic Status)
         status_pattern = r"(\*Signed: Automated Verification Suite.*)"
         status_emoji = '✅ PASS' if success else '❌ FAIL'
         status_line = f"*Signed: Automated Verification Suite (Result: {status_emoji})*"
@@ -215,9 +279,10 @@ def main():
     if verification_output:
         updated = update_qa_report(verification_output, is_passing)
         if updated:
-            # Stage the updated QA Report so it is included
+            # Stage the updated QA Report and JSON artifact
             qa_file = ROOT_DIR / "docs" / "qa_report.md"
             subprocess.run(["git", "add", str(qa_file)], cwd=ROOT_DIR)
+            subprocess.run(["git", "add", str(TEST_SUMMARY_FILE)], cwd=ROOT_DIR)
 
     # 1. Halt if verification failed (AFTER updating report)
     if not is_passing:
