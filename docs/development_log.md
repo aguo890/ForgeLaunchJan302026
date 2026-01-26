@@ -258,3 +258,20 @@ The implementation follows **immutable timestamping** principles:
 **Minor Improvements**:
 - Added JSDoc property documentation for `updatedAt`
 - Maintained consistent `[SAFETY]` and `[AUDIT]` comment patterns throughout the codebase
+
+## [2026-01-26 15:47] Refactor Essay Documentation from Strategy Guide to Final Submission
+
+**Context/Problem:**
+The `docs/essays.md` file was structured as a **strategy guide and template** for crafting application essays. It contained detailed prompt analysis, archetype recommendations, and sample drafts. This was appropriate for the development phase but is not the final deliverable. The file needed to be transformed from a planning document into the **final submission content** itself.
+
+**Solution/Implementation:**
+I performed a complete **content replacement and structural refactor**. The file was rewritten to contain only the two required essays and the meta-questions section. The strategic commentary, draft analyses, and checklist were removed. The new structure is:
+1.  **Essay 1:** A direct, personal answer to "What's something we wouldn't know about you just by looking at your resume?"
+2.  **Essay 2:** A direct, personal answer to "What are you looking for in an internship?"
+3.  **Meta-Questions:** A concise list of resources used, time taken, and relevant courses.
+
+**Rationale/Logic:**
+This is a classic **separation of concerns** and **documentation lifecycle** refactor. The strategic guide served its purpose during the ideation phase. The final artifact must be the polished output, not the instructions for creating it. Including the planning logic in the submission would be unprofessional and violate the implicit requirement to provide answers, not commentary on answers. The new content is **denser and more authentic**, replacing generic archetypes with a specific, compelling narrative drawn from real experience (restaurant management) that directly ties to an engineering philosophy.
+
+**Outcome:**
+The file now meets the submission requirements. It is focused, personal, and aligns with Forge's values of impact and community by showcasing **user empathy** and a desire for **rigorous engineering mentorship**. The meta-section provides necessary transparency without clutter. The change was verified by a final review ensuring all prompt questions are answered directly and within the expected word limits.
