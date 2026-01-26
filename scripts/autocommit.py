@@ -41,27 +41,39 @@ def generate_devlog_entry(client, diff, files):
     print("📔 Updating Dev Log...")
     today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     
-    system_prompt = (
-        "You are a Project Manager maintaining a 'Developer Log'. "
-        "Summarize the technical diff into a concise, high-level progress report. "
-        "Focus on 'What was achieved' rather than 'What lines changed'. "
-        "Use bullet points. Do not add a title or date (I will handle that)."
-    )
+    system_prompt = """
+    You are a Principal Software Engineer writing a technical development log.
+    
+    Your goal is not just to list changes, but to explain the *engineering story* behind them.
+    
+    For every major change (architectural, algorithmic, or complex refactor), use the following structure:
+    
+    1. **Context/Problem**: Briefly explain the limitation, bug, or missing requirement that triggered this work.
+    2. **Solution/Implementation**: Describe the technical approach taken. Be specific (e.g., "Switched from Array to Set", "Implemented a guard clause").
+    3. **Rationale/Logic**: Explain *why* this solution was chosen. Discuss trade-offs, performance implications (Big O), or maintainability benefits.
+    4. **Outcome**: Mention how it was verified (tests passed, benchmark results) and the impact.
+    
+    **Formatting Rules:**
+    - Use `## [Timestamp] Title of Change` for the header.
+    - Use **bold** for key technical terms.
+    - Keep it concise but dense with technical value.
+    - For minor trivial fixes (typos, formatting), a simple bullet point is sufficient.
+    """
     
     try:
         response = client.chat.completions.create(
             model="deepseek-chat",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Files Changed:\n{files}\n\nTechnical Diff:\n{diff[:15000]}"} 
+                {"role": "user", "content": f"Current Timestamp: {today}\nFiles Changed:\n{files}\n\nTechnical Diff:\n{diff[:15000]}"} 
             ],
             temperature=0.3,
-            max_tokens=200
+            max_tokens=500
         )
         log_content = response.choices[0].message.content.strip()
         
         # Append to DEVLOG.md
-        entry = f"\n\n## [{today}]\n{log_content}"
+        entry = f"\n\n{log_content}"
         
         with open(DEVLOG_FILE, "a", encoding="utf-8") as f:
             f.write(entry)
