@@ -27,8 +27,9 @@ I am looking for an environment where "it works" is not the bar for success—wh
 * 2 hours: System Design (Productivity Tracker Architecture & DB Normalization).
 * 1 hour: Essay drafting, refining, and final documentation formatting.
 
-**Courses Taken (Relevant):**
-* Data Structures & Algorithms (CS 2xxx)
-* Database Systems (CS 3xxx)
-* Web Application Development
-* *(Note: Adjust specific course names to match your transcript)*
+**Courses Taken:**
+* CSCI 1112: Algorithms & Data Structures
+* CSCI 2541W: Database Systems & Team Projects
+* CSCI 2113: Software Engineering
+* CSCI 3212: Algorithms
+* CSCI 4907: Big Data & Analytics
