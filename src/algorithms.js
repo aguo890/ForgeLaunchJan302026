@@ -16,7 +16,6 @@
 
 /**
  * Randomly reorders (shuffles) an array in-place using Fisher-Yates with Rejection Sampling.
- * Uses crypto.getRandomValues for unbiased, secure distribution if available.
  * * COMPLEXITY:
  * - Time: O(N)
  * - Space: O(1) (In-place)
