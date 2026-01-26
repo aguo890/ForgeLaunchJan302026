@@ -57,44 +57,61 @@ const shuffleArray = (array) => {
 };
 
 /**
- * Detects if a value contains all digits 0-9.
- * * OPTIMIZATION:
- * Uses a bitmask (integer) check instead of a Set to minimize heap allocations.
- * Checks against binary 1111111111 (Decimal 1023).
- * * @param {string|number} input 
+ * Detects if a value is a 0-9 pandigital number using Bitwise operations.
+ * * ALGORITHMIC STRATEGY:
+ * Uses a bitmask to track seen digits. This allows for O(1) Space complexity
+ * (a single integer) compared to O(N) Space for a Set or Array.
+ * * COMPLEXITY:
+ * - Time: O(N) where N is the number of digits.
+ * - Space: O(1) - Constant space usage (single integer variable).
+ * * @param {string|number} input - The value to check.
  * @returns {boolean}
  */
 const isPandigital = (input) => {
-    // Fast fail for null/undefined
     if (input == null) return false;
 
-    // Check for 'e' ONLY if input was a number (scientific notation data loss)
-    // If input is a string, 'e' is just a character and doesn't imply loss of precision for the "digits"
+    // Fast path: If it's a number, ensure it's not scientific notation 
+    // which distorts the "digits" concept (e.g., 1e21).
     if (typeof input === 'number') {
+        // Optimization: Small numbers cannot be pandigital (must be > 1 billion)
+        if (input < 1023456789) return false;
+
+        // Convert to string to handle the digits safely
         const strVal = String(input);
-        if (strVal.includes('e') || strVal.includes('E')) return false;
+        if (strVal.includes('e')) return false;
+
+        // Pass to the logic below
+        return checkStringBitmask(strVal);
     }
 
     const str = String(input);
-
-    // Optimization: A 0-9 pandigital number must have at least 10 digits.
     if (str.length < 10) return false;
 
+    return checkStringBitmask(str);
+};
+
+/**
+ * Helper function to perform the bitmask check on a string.
+ * Checks against binary 1111111111 (Decimal 1023).
+ * @param {string} str 
+ * @returns {boolean}
+ */
+const checkStringBitmask = (str) => {
     let mask = 0;
-    const TARGET_MASK = 1023; // Binary 1111111111
+    const TARGET_MASK = 0b1111111111; // Binary literal for clarity (ES6)
 
     for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);
-        // '0' is 48, '9' is 57
+
+        // ASCII '0' is 48, '9' is 57
         if (code >= 48 && code <= 57) {
             const digit = code - 48;
-            mask |= (1 << digit);
+            mask |= (1 << digit); // Set the bit corresponding to the digit
 
-            // Optimization: Early exit
+            // Optimization: Early exit if we have found all 10 digits
             if (mask === TARGET_MASK) return true;
         }
     }
-
     return false;
 };
 

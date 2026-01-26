@@ -4,6 +4,13 @@ const { performance } = require('perf_hooks'); // Built-in node module
 console.log("Starting Benchmark: isPandigital (Bitmask vs Set Baseline estimate)");
 console.log("---------------------------------------------------------------");
 
+// 0. Warmup (Crucial for JIT accuracy)
+console.log("Warming up JIT compiler...");
+for (let i = 0; i < 10000; i++) {
+    isPandigital("1234567890");
+}
+
+
 // 1. Define the Old Implementation for Comparison
 const isPandigitalSet = (input) => {
     if (input == null) return false;

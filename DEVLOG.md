@@ -37,3 +37,9 @@
 *   **Enhanced Pandigital Detection**: Added a critical guard clause to the `isPandigital` function to reject numbers in scientific notation (e.g., `1e+21`). This prevents false positives by ensuring only precise string representations are evaluated, addressing a subtle edge case in JavaScript's number-to-string conversion for large integers.
 *   **Comprehensive Documentation Overhaul**: Completely rewrote the `README.md` to transform it from a simple engineering log into a detailed, expert-level technical and strategic analysis. The new document provides deep rationale for technology choices, explains evaluation criteria from a hiring perspective, and offers strategic guidance for the entire challenge, positioning the submission as a professional-grade deliverable.
 *   **Maintained Algorithmic Integrity**: All core algorithms (Fisher-Yates shuffle, pandigital detection) remain unchanged and fully functional, with their performance characteristics and correctness rigorously preserved.
+
+## [2026-01-26 04:03]
+- Optimized the `isPandigital` algorithm by implementing a bitmask approach, reducing space complexity from O(N) to O(1) and improving performance.
+- Added a helper function `checkStringBitmask` to centralize the bitmask logic, enhancing code clarity and maintainability.
+- Introduced early exit conditions for numbers below 1 billion and scientific notation, speeding up invalid case detection.
+- Updated the benchmark test to include a JIT compiler warmup phase, ensuring more accurate performance measurements.
