@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-26T23:32:34.551Z",
+  "timestamp": "2026-01-26T23:34:03.139Z",
   "overall_status": "PASS",
   "tests": {
     "fisher_yates": {
@@ -11,12 +11,12 @@
           "iterations": 60000,
           "tolerance_percent": 2,
           "permutation_counts": {
-            "123": 9981,
-            "132": 10144,
-            "213": 9875,
-            "231": 9963,
-            "312": 9918,
-            "321": 10119
+            "123": 10016,
+            "132": 10003,
+            "213": 10136,
+            "231": 9984,
+            "312": 9997,
+            "321": 9864
           },
           "comment": "Statistically uniform"
         }
@@ -120,6 +120,6 @@
   },
   "meta": {
     "engine": "Node v22.17.1",
-    "execution_time_ms": 18
+    "execution_time_ms": 16
   }
 }

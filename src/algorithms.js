@@ -173,6 +173,11 @@ if (typeof require !== 'undefined' && require.main === module) {
     assert(isPandigital(undefined) === false, "Undefined input rejected");
     assert(isPandigital("123456789a") === false, "Non-digit character rejected");
 
+    // Edge Cases: IEEE 754 & Scientific Notation
+    assert(isPandigital(9007199254740992) === false, "Unsafe integer (MAX_SAFE_INTEGER + 1) rejected");
+    assert(isPandigital("1e9") === false, "Scientific notation string rejected");
+    assert(isPandigital(1e9) === false, "Scientific notation number (too small) rejected");
+
     // 2. Shuffle Checks
     console.log("\n--- Shuffle Tests ---");
     const input = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -200,6 +205,10 @@ if (typeof require !== 'undefined' && require.main === module) {
     let caught = false;
     try { shuffleArray("not an array"); } catch (e) { caught = true; }
     assert(caught, "TypeError thrown for non-array input");
+
+    // Entropy Reset API
+    shuffleArray._resetEntropy();
+    assert(true, "Entropy reset executed without error");
 
     console.log("\nVerification Complete.");
 }
