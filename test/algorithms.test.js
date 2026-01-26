@@ -76,4 +76,14 @@ describe('isPandigital', () => {
         // 10234567890123456789 is fine as string
         assert.strictEqual(isPandigital('10234567890123456789'), true);
     });
+    it('should return TRUE for strings that happen to look like scientific notation if they have all digits', () => {
+        // "1e234567890" contains all digits 0-9.
+        // As a STRING input, this is just a sequence of characters.
+        assert.strictEqual(isPandigital('1e234567890'), true);
+    });
+
+    it('should return FALSE for scientific notation NUMBERS (data loss)', () => {
+        // 1e23 converts to a large number with zeros, not preserving the "digits" in the exponent visually
+        assert.strictEqual(isPandigital(1e23), false);
+    });
 });

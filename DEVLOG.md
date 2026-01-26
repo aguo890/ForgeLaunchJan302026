@@ -32,3 +32,8 @@
     *   A robust pandigital checker using Set theory with edge-case handling for large numbers and type safety.
 *   **Completed the system design section** with a headless MVC architecture for a productivity tracker and a fully normalized (3NF) relational database schema for a student management system.
 *   **Integrated detailed technical commentary** throughout the documentation, explaining architectural decisions (e.g., UUIDs for distributed readiness, indexing strategies for performance) and demonstrating a senior-level understanding of scalability and data integrity.
+
+## [2026-01-26 03:58]
+*   **Enhanced Pandigital Detection**: Added a critical guard clause to the `isPandigital` function to reject numbers in scientific notation (e.g., `1e+21`). This prevents false positives by ensuring only precise string representations are evaluated, addressing a subtle edge case in JavaScript's number-to-string conversion for large integers.
+*   **Comprehensive Documentation Overhaul**: Completely rewrote the `README.md` to transform it from a simple engineering log into a detailed, expert-level technical and strategic analysis. The new document provides deep rationale for technology choices, explains evaluation criteria from a hiring perspective, and offers strategic guidance for the entire challenge, positioning the submission as a professional-grade deliverable.
+*   **Maintained Algorithmic Integrity**: All core algorithms (Fisher-Yates shuffle, pandigital detection) remain unchanged and fully functional, with their performance characteristics and correctness rigorously preserved.

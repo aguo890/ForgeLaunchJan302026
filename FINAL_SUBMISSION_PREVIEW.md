@@ -151,6 +151,10 @@ const isPandigital = (input) => {
 
   const str = String(input);
 
+  // Guard: Scientific notation causes false positives (counting exponent digits).
+  // Large numbers must be passed as precise strings, not approximations.
+  if (str.includes('e') || str.includes('E')) return false;
+
   // Optimization: A 0-9 pandigital number must have at least 10 digits.
   if (str.length < 10) return false;
 
