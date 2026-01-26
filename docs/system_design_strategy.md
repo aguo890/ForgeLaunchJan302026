@@ -1,184 +1,123 @@
 # Part 1: Software Engineering Project - Group B (System Design)
 
 ## 1. Executive Summary
-Group B shifts the focus from algorithmic problem solving to software architecture. The goal here is to demonstrate how to structure code for scalability, readability, and data integrity.
+
+Group B shifts the focus from algorithmic problem solving to software architecture. The goal is to demonstrate how to structure code for **scalability**, **readability**, and **data integrity** using industry-standard patterns like Headless MVC and distributed system design.
+
+---
 
 ## 2. Question B1: Online Productivity Tracker (Headless MVC)
 
 ### 2.1 Requirements & Interpretation
-*   **Properties:** Title, Description, Dates, Status.
-*   **Functions:** Add, Delete, Reorganize, Edit.
-*   **Constraint:** No HTML/jQuery.
 
-**Interpretation:** The "No HTML" constraint implies a **"Headless"** or **"Model-Controller"** implementation. We are building the logic layer of a To-Do application. The solution should be structured as a reusable API or Class that a frontend framework (like React or Vue) could theoretically consume.
+* **Properties:** Title, Description, Dates, Status.
+* **Functions:** Add, Delete, Reorganize, Edit.
+* **Constraint:** No HTML/jQuery.
+
+**Interpretation:** The "No HTML" constraint necessitates a **"Headless"** implementation. This is the logic layer of a Productivity application, structured as a reusable API or Class.
 
 ### 2.2 Architectural Pattern: Object-Oriented Design
-To manage the state of the application effectively, we should use Classes.
 
-*   **`Task` Class:** Represents the data model of a single item. It encapsulates validation logic (e.g., ensuring a status is valid).
-*   **`TodoList` Class:** Represents the controller/manager. It holds the array of tasks and provides methods to manipulate them.
+To manage application state effectively, we utilize two primary classes:
 
-This separation of concerns is critical. The `TodoList` shouldn't worry about how a `Task` formats its date; the `Task` shouldn't worry about where it sits in the list.
+* **`Task` Class:** The data model. It encapsulates validation (sanitizing descriptions) and state integrity (Enums).
+* **`TodoList` Class:** The controller. It manages the collection using a **Normalized State** pattern (storing items in a `Map` for O(1) access while maintaining a separate `Array` for sort order).
 
-### 2.3 State Management and Enums
-Magic strings (e.g., checking `if (status === 'done')`) are a source of bugs (typos like 'Done' or 'completed'). We will use a JavaScript object as an **Enum** to define valid statuses, ensuring type safety across the application.
+### 2.3 State Integrity and Defensive Engineering
 
-### 2.4 The "Reorganize" Challenge
-The requirement to "reorganize list" implies moving an item from index A to index B. This requires careful array manipulation using `splice`.
-*   **Mechanism:** `array.splice(fromIndex, 1)` removes the item. `array.splice(toIndex, 0, item)` inserts it.
-*   **Validation:** We must ensure indices are within bounds to prevent runtime errors.
+* **Enums:** We use a frozen `TaskStatus` object to prevent "magic string" bugs.
+* **Collision Resistance:** Instead of a simple counter, we use `crypto.randomUUID()` to ensure unique IDs across distributed sessions.
+* **Defensive DTOs:** To prevent external mutation of the internal state, the `getAll()` and `edit()` methods return **shallow-frozen clones** of the task data, including new `Date` instances to prevent reference mutation.
 
-### 2.5 The Solution Code
+### 2.4 The Solution Code (Hardened)
+
 ```javascript
-/**
- * @fileoverview Headless MVC Implementation for Productivity Tracker
- * Adheres to High-Insight Engineering Standards: 
- * - Input Sanitization
- * - Strict State Management (Enums)
- * - ERROR: Error Boundary Handling
- * - VERIFICATION: This change triggers a documentation sync to reflect the DTO pattern.
-  */
+"use strict";
 
-// 1. State Integrity: Enum for Task Status
 const TaskStatus = Object.freeze({
     PENDING: 'pending',
     IN_PROGRESS: 'in_progress',
     COMPLETED: 'completed'
 });
 
-// 2. Model: Task (Encapsulation of Data & Validation)
 class Task {
     constructor(id, description) {
         if (!description || typeof description !== 'string' || description.trim() === '') {
             throw new Error('Task description must be a non-empty string.');
         }
-
         this.id = id;
-        this.description = description.trim(); // Input Sanitization
+        this.description = description.trim();
         this.status = TaskStatus.PENDING;
         this.createdAt = new Date();
-    }
-
-    updateStatus(newStatus) {
-        const validStatuses = Object.values(TaskStatus);
-        if (!validStatuses.includes(newStatus)) {
-            throw new Error(`Invalid status: ${newStatus}. Must be one of: ${validStatuses.join(', ')}`);
-        }
-        this.status = newStatus;
+        this.updatedAt = new Date(); // [AUDIT] Modification tracking
     }
 }
 
-// 3. Controller: TodoList (Collection Management)
 class TodoList {
     constructor() {
-        this.tasksMap = new Map(); // O(1) Read/Write
-        this.taskOrder = [];       // Maintains Sort Order
-        this._idCounter = 1;
+        this.tasksMap = new Map(); 
+        this.taskOrder = [];
     }
 
-    /**
-     * Creates an immutable Data Transfer Object (DTO).
-     * Prevents external code from modifying the internal Map state by reference.
-     * @param {Task} task - The internal mutable task instance
-     * @returns {Object} - Frozen DTO
-     */
+    _generateId() {
+        // [PERFORMANCE] crypto.randomUUID() is optimized at the engine level 
+        // and guarantees collision resistance suitable for distributed systems.
+        return typeof crypto !== 'undefined' && crypto.randomUUID 
+            ? crypto.randomUUID() 
+            : Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+    }
+
     _toDTO(task) {
         return Object.freeze({
             id: task.id,
             description: task.description,
             status: task.status,
-            createdAt: task.createdAt
+            // [SAFETY] Return new Date instances to prevent reference mutation
+            createdAt: new Date(task.createdAt),
+            updatedAt: new Date(task.updatedAt)
         });
     }
 
     add(description) {
-        const id = this._idCounter++;
+        const id = this._generateId();
         const newTask = new Task(id, description);
-
-        // Normalized State: Store by ID, Track Order separately
         this.tasksMap.set(id, newTask);
         this.taskOrder.push(id);
-
-        return newTask.id;
+        return id;
     }
 
-    delete(id) {
-        const deleted = this.tasksMap.delete(id); // O(1)
-        if (deleted) {
-            // O(N) - Necessary cost to maintain array order without holes
-            this.taskOrder = this.taskOrder.filter(taskId => taskId !== id);
-        }
-        return deleted;
-    }
-
-    edit(id, newDescription) {
-        // O(1) Lookup
-        if (!this.tasksMap.has(id)) {
-            throw new Error(`Task with ID ${id} not found.`);
-        }
-
-        const task = this.tasksMap.get(id);
-
-        // Validation
-        if (!newDescription || typeof newDescription !== 'string' || newDescription.trim() === '') {
-            throw new Error('New description must be a non-empty string.');
-        }
-
-        task.description = newDescription.trim();
-
-        // Return Safe DTO
-        return this._toDTO(task);
-    }
-
-    /**
-     * Reorganizes the list by moving a task from one index to another.
-     * @param {number} fromIndex 
-     * @param {number} toIndex 
-     */
     reorganize(fromIndex, toIndex) {
         if (fromIndex < 0 || fromIndex >= this.taskOrder.length ||
             toIndex < 0 || toIndex >= this.taskOrder.length) {
-            throw new RangeError(`Reorganize failed: Index out of bounds.`);
+            throw new RangeError('Reorganize failed: Index out of bounds.');
         }
-
         const [movedId] = this.taskOrder.splice(fromIndex, 1);
         this.taskOrder.splice(toIndex, 0, movedId);
     }
 
     getAll() {
-        // Map the ID order to actual DTOs
         return this.taskOrder.map(id => this._toDTO(this.tasksMap.get(id)));
     }
 }
 ```
 
+> [!NOTE]
+> Full implementation with all CRUD operations: [system_design.js](file:///c:/Users/19803/business/ForgeLaunch/ForgeLaunchSpring2026Jan30/src/system_design.js)
+
 ---
 
 ## 3. Question B2: Database Design (Relational Schema)
 
-### 3.1 Conceptual Analysis: Entities and Relationships
-The prompt asks for a design for "people met in college" covering classes, clubs, and personal info. 
+### 3.1 Normalization and Redundancy Prevention
 
-**Core Entities:**
-*   `STUDENT` (The central entity)
-*   `COURSE` (Academic course)
-*   `CLUB` (Extracurricular)
+The schema follows **3rd Normal Form (3NF)**. We use junction tables to resolve many-to-many relationships.
 
-**Relationship Analysis:**
-*   **Student ↔ Course:** A student takes many courses; a course has many students. **(Many-to-Many / M:N)**
-*   **Student ↔ Club:** A student joins many clubs; a club has many members. **(Many-to-Many / M:N)**
+* **1NF:** No lists in columns. Junction tables instead.
+* **2NF:** No partial dependencies. `Professor_Name` lives in `COURSE`, not `ENROLLMENT`.
+* **3NF:** No transitive dependencies.
+* **Data Privacy (PII):** Production schema would encrypt emails at rest (AES-256) and index on hashed values.
 
-**Crucial Insight:** In relational databases, M:N relationships *cannot* be represented directly. They require a **Junction Table** (Associative Entity).
-
-### 3.2 Normalization (Redundancy Prevention)
-The prompt explicitly asks about "redundancy prevention." This refers to **Database Normalization (3NF)**.
-*   **1NF (First Normal Form):** We do not store lists in columns. No `Classes_Taken` column with "Math 101, CS 102". We use a junction table.
-*   **2NF (Second Normal Form):** Check for partial dependencies. We don't store `Professor_Name` in the `ENROLLMENT` table. That belongs in `COURSE`.
-*   **3NF (Third Normal Form):** Transitive dependencies removed.
-*   **Data Privacy (PII):** Although not explicitly requested, a production schema storing student emails would require encryption at rest (e.g., AES-256) to comply with GDPR/CCPA standards. The `email` index would operate on a hashed value (e.g., SHA-256) to allow lookups without exposing raw data.
-
-### 3.3 Visual Representation (Mermaid.js)
-The following Entity-Relationship Diagram (ERD) visualizes this schema.
+### 3.2 Visual Representation (ERD)
 
 ```mermaid
 erDiagram
@@ -193,60 +132,150 @@ erDiagram
         string last_name
         string email "UNIQUE INDEX"
     }
-
     COURSE {
-        string course_code PK "e.g., CS-101"
+        string course_code PK
         string course_name
         string professor_name
         string location
     }
-
+    ENROLLMENT {
+        int enrollment_id PK
+        int student_id FK
+        string course_code FK
+        string grade
+    }
     CLUB {
         int club_id PK
         string club_name
-        string president_name
+        int president_id FK
     }
-
-    ENROLLMENT {
-        int enrollment_id PK
-        int student_id FK "INDEXED"
-        string course_code FK "INDEXED"
-        string grade
-    }
-
     CLUB_MEMBERSHIP {
         int membership_id PK
-        int student_id FK "INDEXED"
-        int club_id FK "INDEXED"
-        string role "e.g. Member, Treasurer"
+        int student_id FK
+        int club_id FK
+        string role
     }
 ```
 
-### 3.4 Schema Description (Narrative)
-*   **Organization:** The database is organized into three strong entity tables (`STUDENT`, `COURSE`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`).
-*   **Referential Integrity:** Foreign Keys (FK) in the associative tables link back to the strong entities. I utilized Foreign Key constraints with **ON DELETE CASCADE** for the junction tables. This ensures that if a Student record is deleted, their corresponding enrollment and membership records are automatically removed, preventing data integrity issues (orphaned records).
-*   **Redundancy Prevention:** By adhering to 3NF, the `meeting_time` of a club is stored exactly once in the `CLUB` table. If the meeting time changes, we update one record, not every student's record.
+### 3.3 Data Integrity Constraints
+
+* **Composite Unique Constraints:** `UNIQUE(student_id, course_code)` prevents duplicate enrollments.
+* **Referential Integrity:** `ON DELETE CASCADE` ensures deleting a student cleanses their enrollments automatically.
+
+### 3.4 DDL Scripts (PostgreSQL)
+
+```sql
+-- Core Entities
+CREATE TABLE students (
+    student_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL
+);
+
+CREATE TABLE courses (
+    course_code VARCHAR(10) PRIMARY KEY,
+    course_name VARCHAR(100) NOT NULL,
+    professor_name VARCHAR(100),
+    location VARCHAR(50)
+);
+
+CREATE TABLE clubs (
+    club_id SERIAL PRIMARY KEY,
+    club_name VARCHAR(100) UNIQUE NOT NULL,
+    president_id INT REFERENCES students(student_id)
+);
+
+-- Junction Tables with Integrity Constraints
+CREATE TABLE enrollments (
+    enrollment_id SERIAL PRIMARY KEY,
+    student_id INT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+    course_code VARCHAR(10) NOT NULL REFERENCES courses(course_code) ON DELETE CASCADE,
+    grade CHAR(2),
+    CONSTRAINT unique_student_course UNIQUE (student_id, course_code)
+);
+
+CREATE TABLE club_memberships (
+    membership_id SERIAL PRIMARY KEY,
+    student_id INT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+    club_id INT NOT NULL REFERENCES clubs(club_id) ON DELETE CASCADE,
+    role VARCHAR(50) DEFAULT 'Member',
+    CONSTRAINT unique_student_club UNIQUE (student_id, club_id)
+);
+
+-- Performance Indexing
+CREATE INDEX idx_student_email ON students (email);
+CREATE INDEX idx_enrollment_student ON enrollments (student_id);
+```
 
 ---
 
-## 4. Advanced Case Study: Scalable URL Shortener (Bonus)
+## 4. Advanced Case Study: Scalable URL Shortener (B4)
 
-### 4.1 Architecture Overview
-While the Productivity Tracker demonstrates clean OOP principles, this section explores a high-concurrency distributed system design: a URL Shortener (like bit.ly) capable of handling 100M writes/month.
+### 4.1 Architecture: The Base62 Strategy
 
-### 4.2 The "Base62" Encoding Strategy
-A naive approach uses random alphanumeric strings, but this risks collision. A scalable engineering solution utilizes **Base62 Encoding** (A-Z, a-z, 0-9).
-* **Math:** $62^7 \approx 3.5 \text{ Trillion}$ combinations. A 7-character string is sufficient for decades of usage.
-* **ID Generation:** We use a distributed ID generator (e.g., Snowflake) to produce a unique 64-bit integer, then base-convert that integer to Base62. This guarantees uniqueness without checking the DB for collisions.
+To handle 100M writes/month, we use **Base62 Encoding** (0-9, a-z, A-Z) mapped to unique 64-bit integers.
 
-### 4.3 High-Performance Reads (Caching Strategy)
-The system is read-heavy (100:1 Read/Write ratio).
-* **Cache-Aside Pattern:** When a user requests `short.url/xyz`:
-    1.  Check Redis/Memcached.
-    2.  If Miss: Fetch from DB (PostgreSQL/Cassandra), return to user, and write to Cache.
-* **Eviction Policy:** Use **LRU (Least Recently Used)**. Viral links stay hot in memory; obscure links fade to disk storage.
+* **Capacity:** 62^7 = 3.5 trillion combinations
+* **Collision-Free:** Range-based ID allocation (Zookeeper/Snowflake) guarantees uniqueness without DB checks.
+
+### 4.2 Base62 Codec
+
+```javascript
+const CHARSET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const BASE = 62;
+
+function encodeBase62(num) {
+    if (num === 0) return CHARSET[0];
+    let res = "";
+    while (num > 0) {
+        res = CHARSET[num % BASE] + res;
+        num = Math.floor(num / BASE);
+    }
+    return res;
+}
+
+function decodeBase62(str) {
+    let res = 0;
+    for (let i = 0; i < str.length; i++) {
+        res = res * BASE + CHARSET.indexOf(str[i]);
+    }
+    return res;
+}
+```
+
+> [!NOTE]
+> Full implementation with URLService: [url_shortener.js](file:///c:/Users/19803/business/ForgeLaunch/ForgeLaunchSpring2026Jan30/src/url_shortener.js)
+
+### 4.3 High-Performance Read Flow (Cache-Aside)
+
+```mermaid
+flowchart LR
+    A[Request] --> B{Bloom Filter}
+    B -->|Not Found| C[404]
+    B -->|Maybe Exists| D{Redis}
+    D -->|Hit| E[Return URL]
+    D -->|Miss| F[(PostgreSQL)]
+    F -->|Found| G[Hydrate Cache] --> E
+    F -->|Not Found| C
+```
 
 ### 4.4 Optimization: Bloom Filters
-To prevent "Cache Penetration" (malicious users requesting billions of non-existent keys to hammer the DB), we implement a **Bloom Filter**.
-* **Mechanism:** A probabilistic data structure that tells us if a URL is "definitely not in the set" or "probably in the set."
-* **Impact:** We reject 99% of invalid requests at the memory layer before they ever touch the database disk IO.
+
+To prevent **Cache Penetration** (malicious requests for non-existent keys):
+
+* **Mechanism:** Probabilistic data structure — "definitely not" or "probably exists"
+* **Impact:** Rejects 99% of invalid requests at the memory layer
+
+### 4.5 Scalability Solutions
+
+| Challenge | Solution |
+|-----------|----------|
+| ID Bottleneck | Range-based allocation via Zookeeper |
+| Hot Keys | Local L1 Cache for top 0.1% URLs |
+| Cache Penetration | Bloom Filter pre-check |
+| Write Volume | Cassandra/DynamoDB horizontal scaling |
+
+---
+
+*Last Updated: 2026-01-26*

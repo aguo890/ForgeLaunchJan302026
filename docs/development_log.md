@@ -537,3 +537,40 @@ The system had two subtle but important issues:
 **Minor Updates:**
 - Updated test execution timestamps in QA report and summary JSON
 - Fisher-Yates permutation counts show expected statistical variation across test runs
+
+## [2026-01-26 18:42] System Design Documentation Refactor & URL Shortener Implementation
+
+### Context/Problem
+The system design documentation (`docs/system_design_strategy.md`) had become verbose and lacked technical precision. It mixed implementation details with conceptual explanations, making it difficult for engineers to extract actionable patterns. Simultaneously, the URL shortener implementation (`src/url_shortener.js`) was missing from the documentation despite being referenced as a "bonus" case study.
+
+### Solution/Implementation
+1. **Documentation Restructuring**: Completely rewrote the system design document with a focus on **technical density** and **actionable patterns**. 
+   - Replaced narrative explanations with direct technical specifications
+   - Added concrete code examples with inline annotations (e.g., `[AUDIT]`, `[PERFORMANCE]`)
+   - Structured sections around specific engineering concerns (state integrity, normalization, scalability)
+
+2. **URL Shortener Implementation**: Added the complete Base62 encoding algorithm to the documentation, including:
+   - **Character mapping** for 62-character alphabet (0-9, a-z, A-Z)
+   - **Bi-directional conversion** functions (`encode()` and `decode()`)
+   - **Collision handling** with unique ID generation
+   - **Capacity calculations** showing 3.5 trillion possible 7-character URLs
+
+3. **Technical Annotations**: Used bracketed tags to highlight engineering decisions:
+   ```javascript
+   // [PERFORMANCE] crypto.randomUUID() is optimized at the engine level
+   // [SAFETY] Return new Date instances to prevent reference mutation
+   ```
+
+### Rationale/Logic
+The refactor follows **information hierarchy** principles:
+- **Top-level**: Executive summary establishes the shift from algorithms to architecture
+- **Mid-level**: Each question (B1, B2, B4) treated as independent case study
+- **Code-level**: Annotated implementations with rationale for specific choices
+
+For the URL shortener, the **Base62 encoding** was chosen over alternatives (Base64, hash-based) because:
+- **URL-safe**: No special characters that need URL encoding
+- **Dense encoding**: 7 characters → 62^7 = 3.5 trillion combinations
+- **Deterministic**: Integer-based mapping ensures no collisions
+- **O(1) operations**: Both encoding and decoding are constant time
+
+The **character mapping
