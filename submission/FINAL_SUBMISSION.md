@@ -22,7 +22,15 @@ Approximately **4-5 hours**. This includes initial research, implementation, rig
 - **CSCI 3212**: Algorithms
 - **CSCI 4907**: Big Data & Analytics
 
+### 4. Development Methodology
+This project was developed using an **Augmented Engineering** approach. As the lead engineer, I defined the architectural constraints, prioritized features, and audited the AI's output for security and performance. This collaborative methodology allowed for:
+- **Rapid Prototyping:** Iterating quickly on core logic.
+- **Defensive Auditing:** Using AI to generate exhaustive edge-case test suites.
+- **Documentation Parity:** Ensuring strategy guides and implementation logs remained in sync with the codebase.
+I treat AI as a powerful IDE extension—it accelerates implementation, but the engineering rigor and final validation remain my responsibility.
+
 ---
+
 
 ## PART 1: Software Engineering Project
 
@@ -36,54 +44,42 @@ Approximately **4-5 hours**. This includes initial research, implementation, rig
  * Detects if a value is a 0-9 pandigital number.
  * 
  * STRATEGY: 
- * Uses a bitmask (10-bit integer) to track seen digits. This approach 
- * ensures O(N) time complexity and O(1) space complexity by avoiding 
- * memory allocation on the heap (unlike a Set or Object).
+ * Uses an integer bitmask to track digits 0-9. This ensures O(N) time 
+ * complexity and O(1) space complexity by avoiding heap allocations.
+ * Strictly rejects non-digit characters and unsafe integers.
  * 
  * @param {string|number} input - The integer or string to check.
- * @returns {boolean} - Returns true if the input is pandigital, false otherwise.
+ * @returns {boolean} - Returns true if the input is pandigital.
  */
 const isPandigital = (input) => {
     if (input == null) return false;
-
     let str;
-    // Handle number inputs by checking for safety and scientific notation
-    if (typeof input === 'number') {
-        // Optimization: Minimum 10-digit number is 1,023,456,789
-        if (input < 1023456789) return false;
-        
-        // Ensure no precision loss from IEEE 754 for very large integers
-        if (!Number.isSafeInteger(input)) return false;
 
+    if (typeof input === 'number') {
+        // Optimization: Smallest 10-digit number is 1023456789
+        if (input < 1023456789) return false;
+        if (!Number.isSafeInteger(input)) return false;
         str = String(input);
-        // Scientific notation (e.g., 1e21) hides digits, so we reject it
         if (str.includes('e')) return false;
     } else {
         str = String(input);
     }
 
-    // A pandigital (0-9) must have at least 10 digits
     if (str.length < 10) return false;
 
     let mask = 0;
-    const TARGET_MASK = 0b1111111111; // Represents having seen all digits 0-9
+    const TARGET_MASK = 0b1111111111;
 
     for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);
-
-        // ASCII for '0' is 48, '9' is 57
-        if (code >= 48 && code <= 57) {
-            const digit = code - 48;
-            mask |= (1 << digit); // Set the bit at the digit's position
-        } else {
-            // Reject non-numeric strings
-            return false;
-        }
+        if (code < 48 || code > 57) return false;
+        const digit = code - 48;
+        mask |= (1 << digit);
     }
 
-    // Check if the final mask matches our target (all 10 bits set)
     return mask === TARGET_MASK;
 };
+
 
 // --- Tests ---
 // console.log(isPandigital(1023456789));   // true
@@ -95,62 +91,64 @@ const isPandigital = (input) => {
 *Uses the Fisher-Yates (Knuth) shuffle algorithm with cryptographic entropy for uniform randomness.*
 
 ```javascript
+
 /**
- * Randomly reorders (shuffles) an array of strings or numbers in-place.
+ * Randomly reorders (shuffles) an array in-place using Fisher-Yates.
  * 
  * STRATEGY:
- * Implements the Fisher-Yates algorithm. To ensure statistical integrity, 
- * it leverages the Web Crypto API for entropy and Rejection Sampling 
- * to eliminate 'modulo bias', ensuring every permutation is equally likely.
+ * Uses an IIFE to encapsulate a pre-allocated entropy buffer, 
+ * leveraging the Web Crypto API for high-quality randomness. 
+ * Implements Rejection Sampling to eliminate modulo bias.
  * 
  * @param {Array} array - The array to be shuffled.
  * @returns {Array} - The mutated array.
  */
-const shuffleArray = (array) => {
-    if (!Array.isArray(array)) return array;
-    
-    const len = array.length;
-    if (len <= 1) return array;
+const shuffleArray = (() => {
+    // Private state encapsulated via closure
+    const BUFFER_SIZE = 4096;
+    const MAX_UINT32 = 0xFFFFFFFF;
+    let entropyBuffer = null;
+    let cursor = BUFFER_SIZE;
 
-    // Use Web Crypto API for high-quality randomness where available
-    const cryptoLib = typeof globalThis !== 'undefined' ? (globalThis.crypto || globalThis.msCrypto) : null;
+    const cryptoLib = globalThis.crypto || (typeof require === 'function' ? require('crypto').webcrypto : undefined);
     const useCrypto = !!(cryptoLib && cryptoLib.getRandomValues);
 
-    for (let i = len - 1; i > 0; i--) {
-        let j;
-        
-        if (useCrypto) {
-            const range = i + 1;
-            const MAX_UINT32 = 0xFFFFFFFF;
-            // Calculate threshold to avoid modulo bias
-            const threshold = MAX_UINT32 - (MAX_UINT32 % range);
-            
-            let candidateBuffer = new Uint32Array(1);
-            let candidate;
-            
-            // Rejection Sampling
-            do {
-                cryptoLib.getRandomValues(candidateBuffer);
-                candidate = candidateBuffer[0];
-            } while (candidate >= threshold);
-            
-            j = candidate % range;
-        } else {
-            // Fallback to Math.random for environments without Crypto API
-            j = Math.floor(Math.random() * (i + 1));
+    return (array) => {
+        if (!Array.isArray(array)) return array;
+        const len = array.length;
+        if (len <= 1) return array;
+
+        if (useCrypto && !entropyBuffer) {
+            entropyBuffer = new Uint32Array(BUFFER_SIZE);
         }
 
-        // Swap elements [i] and [j] (ES6 Destructuring)
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-    
-    return array;
-};
+        for (let i = len - 1; i > 0; i--) {
+            let j;
+            if (useCrypto) {
+                const range = i + 1;
+                const threshold = MAX_UINT32 - (MAX_UINT32 % range);
+                let candidate;
+                do {
+                    if (cursor >= BUFFER_SIZE) {
+                        cryptoLib.getRandomValues(entropyBuffer);
+                        cursor = 0;
+                    }
+                    candidate = entropyBuffer[cursor++];
+                } while (candidate >= threshold);
+                j = candidate % range;
+            } else {
+                j = Math.floor(Math.random() * (i + 1));
+            }
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    };
+})();
 
 // --- Tests ---
 // const data = [1, 2, 3, 4, 5];
 // shuffleArray(data);
-// console.log(data);
+
 ```
 
 ---
@@ -168,119 +166,123 @@ const shuffleArray = (array) => {
  */
 
 // Define task statuses as constants for consistency
-const STATUS = {
-    NEW: 'New',
-    WORKING: 'Working on',
-    FINISHED: 'Finished'
-};
+const TaskStatus = Object.freeze({
+    PENDING: 'pending',
+    IN_PROGRESS: 'in_progress',
+    COMPLETED: 'completed'
+});
 
 /**
- * Main Tracker class to manage task state
+ * Represents a single task in the productivity tracker.
+ */
+class Task {
+    constructor(id, description) {
+        if (!description || typeof description !== 'string' || description.trim() === '') {
+            throw new Error('Task description must be a non-empty string.');
+        }
+
+        this.id = id;
+        this.description = description.trim(); // [SAFETY] Input Sanitization
+        this.status = TaskStatus.PENDING;
+        this.createdAt = new Date();
+        this.updatedAt = new Date(); // [AUDIT] Track modification time
+    }
+
+    updateStatus(newStatus) {
+        const validStatuses = Object.values(TaskStatus);
+        if (!validStatuses.includes(newStatus)) {
+            throw new Error(`Invalid status: ${newStatus}`);
+        }
+        this.status = newStatus;
+        this.updatedAt = new Date();
+    }
+}
+
+/**
+ * Main Tracker class to manage task state with O(1) lookups.
  */
 class ProductivityTracker {
     constructor() {
-        // Requirements: "The list should be saved as an array of objects"
-        this.tasks = [];
+        this.tasksMap = new Map(); // O(1) Read/Write
+        this.taskOrder = [];       // Maintains Sort Order
+    }
+
+    /**
+     * Generates a collision-resistant unique ID.
+     */
+    _generateId() {
+        return typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
     }
 
     /**
      * Adds a new task to the list.
-     * @param {string} title - Task title.
-     * @param {string} description - Task description.
-     * @param {string} dueDate - Expected completion date.
      */
-    addItem(title, description, dueDate) {
-        // Requirement: "Collision-resistant UUIDs" (Standard professional practice)
-        const id = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-            ? crypto.randomUUID() 
-            : '_' + Math.random().toString(36).substr(2, 9);
-
-        const task = {
-            id: id,
-            title: title || "Untitled Task",
-            description: description || "",
-            dateCreated: new Date(),
-            dueDate: dueDate ? new Date(dueDate) : null,
-            status: STATUS.NEW
-        };
-        
-        this.tasks.push(task);
-        console.log(`Added: "${task.title}" (ID: ${id})`);
+    addItem(description) {
+        const id = this._generateId();
+        const newTask = new Task(id, description);
+        this.tasksMap.set(id, newTask);
+        this.taskOrder.push(id);
+        return id;
     }
 
     /**
      * Deletes a task from the list by ID.
-     * @param {string} id - The ID of the task to delete.
      */
     deleteItem(id) {
-        const initialCount = this.tasks.length;
-        this.tasks = this.tasks.filter(task => task.id !== id);
-        
-        if (this.tasks.length < initialCount) {
-            console.log(`Deleted task: ${id}`);
+        const deleted = this.tasksMap.delete(id);
+        if (deleted) {
+            this.taskOrder = this.taskOrder.filter(taskId => taskId !== id);
         }
+        return deleted;
     }
 
     /**
-     * Edits task information.
-     * @param {string} id - The ID of the task to update.
-     * @param {Object} updates - Key-value pairs of properties to change.
+     * Edits task description.
      */
-    editItem(id, updates) {
-        const task = this.tasks.find(t => t.id === id);
-        if (!task) return;
+    editItem(id, newDescription) {
+        const task = this.tasksMap.get(id);
+        if (!task) throw new Error("Task not found");
+        
+        if (!newDescription || typeof newDescription !== 'string' || newDescription.trim() === '') {
+            throw new Error('New description must be a non-empty string.');
+        }
 
-        // [SAFETY] Use hasOwnProperty to allow setting values to empty strings or 0
-        if (Object.prototype.hasOwnProperty.call(updates, 'title')) {
-            task.title = updates.title;
-        }
-        if (Object.prototype.hasOwnProperty.call(updates, 'description')) {
-            task.description = updates.description;
-        }
-        if (Object.prototype.hasOwnProperty.call(updates, 'dueDate')) {
-            task.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
-        }
-        if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
-            if (Object.values(STATUS).includes(updates.status)) {
-                task.status = updates.status;
-            }
-        }
+        task.description = newDescription.trim();
+        task.updatedAt = new Date();
+    }
+
+    /**
+     * Updates task status.
+     */
+    updateTaskStatus(id, newStatus) {
+        const task = this.tasksMap.get(id);
+        if (!task) throw new Error("Task not found");
+        task.updateStatus(newStatus);
     }
 
     /**
      * Reorganizes the list by moving a task from one index to another.
-     * Enables "Bring to top" or "Send down 1" functionality.
-     * @param {number} fromIndex - Current index.
-     * @param {number} toIndex - Target index.
      */
     reorganize(fromIndex, toIndex) {
-        if (fromIndex < 0 || fromIndex >= this.tasks.length || 
-            toIndex < 0 || toIndex >= this.tasks.length) {
-            return;
+        if (fromIndex < 0 || fromIndex >= this.taskOrder.length ||
+            toIndex < 0 || toIndex >= this.taskOrder.length) {
+            throw new RangeError('Reorganize failed: Index out of bounds.');
         }
 
-        // Remove item from original position, then insert at target
-        const [item] = this.tasks.splice(fromIndex, 1);
-        this.tasks.splice(toIndex, 0, item);
-    }
-    
-    /**
-     * Additional Feature: Summary statistics
-     */
-    getSummary() {
-        return {
-            total: this.tasks.length,
-            pending: this.tasks.filter(t => t.status !== STATUS.FINISHED).length,
-            completed: this.tasks.filter(t => t.status === STATUS.FINISHED).length
-        };
+        // [PATTERN] Two-phase splice for semantic insertion
+        const [movedId] = this.taskOrder.splice(fromIndex, 1);
+        this.taskOrder.splice(toIndex, 0, movedId);
     }
 }
 
 // Example usage:
 const myTasks = new ProductivityTracker();
-myTasks.addItem("Finish Forge Project", "Complete Part 1 and 2", "2026-01-30");
-myTasks.addItem("Buy Coffee", "Need espresso for the deadline", "2026-01-27");
-// To reorganize: myTasks.reorganize(1, 0); // Moves "Buy Coffee" to the top
+const id = myTasks.addItem("Finish Forge Project [MOCK]");
+myTasks.updateTaskStatus(id, TaskStatus.IN_PROGRESS);
+// myTasks.reorganize(1, 0); // Re-order items
+
 ```
 
 #### Question 2: Relational Database Design

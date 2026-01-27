@@ -1,0 +1,63 @@
+{
+    "scenarios": [
+        {
+            "name": "Invalid: Empty Description",
+            "action": "add",
+            "payload": {
+                "description": ""
+            },
+            "expected_error": "Task description must be a non-empty string."
+        },
+        {
+            "name": "Invalid: Whitespace Only",
+            "action": "add",
+            "payload": {
+                "description": "   "
+            },
+            "expected_error": "Task description must be a non-empty string."
+        },
+        {
+            "name": "Valid: Special Characters",
+            "action": "add",
+            "payload": {
+                "description": "Task with symbols: !@#$%^&*()_+ {}|:\"<>? \u2705"
+            },
+            "expected_status": "pending"
+        },
+        {
+            "name": "Invalid: Out of Bounds Reorganize (Negative)",
+            "action": "reorganize",
+            "payload": {
+                "from": -1,
+                "to": 0
+            },
+            "expected_error": "Reorganize failed: Index out of bounds."
+        },
+        {
+            "name": "Invalid: Out of Bounds Reorganize (Excessive)",
+            "action": "reorganize",
+            "payload": {
+                "from": 0,
+                "to": 99999
+            },
+            "expected_error": "Reorganize failed: Index out of bounds."
+        },
+        {
+            "name": "Valid: Long Description",
+            "action": "add",
+            "payload": {
+                "description": "This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. This is a very long task description intended to test the system's ability to handle larger strings in memory without truncation or performance degradation. "
+            },
+            "expected_status": "pending"
+        },
+        {
+            "name": "Invalid: Illegal Status Transition",
+            "action": "updateStatus",
+            "payload": {
+                "id": "any",
+                "status": "zombie_state"
+            },
+            "expected_error": "Invalid status: zombie_state"
+        }
+    ]
+}
