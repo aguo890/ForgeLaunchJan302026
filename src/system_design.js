@@ -369,7 +369,7 @@ if (typeof require !== 'undefined' && require.main === module) {
 
     // 1. Add Tasks
     console.log("--- Add Tests ---");
-    const id1 = list.add("First task", "A description", new Date());
+    const id1 = list.add("First task", "A description");
     const id2 = list.add("Second task");
     assert(typeof id1 === 'string' && id1.length > 0, "Add returns unique string ID");
     assert(id1 !== id2, "IDs are unique");

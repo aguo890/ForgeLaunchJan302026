@@ -132,13 +132,13 @@ A "Pandigital" number is one that contains all digits within a specific base. Th
 **Type Handling Requirements:** While the prompt specifies "integer detection," JavaScript `Number` types are floating-point values (IEEE 754). Integers larger than $2^{53} - 1$ (`Number.MAX_SAFE_INTEGER`) lose precision. A truly robust solution must handle the input as a string or convert the number to a string immediately to avoid precision loss on large pandigital numbers.
 
 ### 4.2 Problem Definition & Strict Permutation
-> **Design Decision: Strict vs. Loose Pandigitality**
-> We enforce a strict 10-digit permutation (0-9 exactly once). While a looser "at least once" interpretation is mathematically valid, the permutation approach is the standard expectation in interview and competitive contexts (e.g., Project Euler). Our implementation utilizes a bitmask strategy to ensure $O(1)$ space complexity while maintaining this high-precision requirement.
+> **Design Decision: Inclusive Pandigitality**
+> We support the mathematical "at least once" definition, allowing for inputs longer than 10 digits as long as all digits 0-9 are present. This ensures the system handles complex cases like "pandigital strings" without artificial length constraints. Bitmasking continues to provide $O(1)$ space complexity while maintaining this high-precision requirement.
 
 ### 4.3 The Bitwise Strategy + Length Guard
-*   **Bitmask:** We utilize a 32-bit integer. When digit $k$ is seen, `mask |= (1 << k)`.
-*   **Fail Fast (O(1)):** Before bitwise processing, we verify `str.length === 10`. This eliminates DoS vectors from massive strings and ensures strictness.
-*   **Precision Safety:** We strictly reject `!Number.isSafeInteger(input)` to avoid validating data corrupted by IEEE 754 truncation.
+*   **Bitmask:** We utilize a 32-bit integer. When digit $k$ is seen, `mask |= (1 << k)`. Bitmasking was chosen over a Set to eliminate heap allocation and garbage collection overhead, providing a constant-time check with zero memory footprint.
+*   **Fail Fast:** Before bitwise processing, we verify `str.length >= 10`. This eliminates processing for strings that couldn't possibly be pandigital.
+*   **Precision Safety:** We strictly reject `!Number.isSafeInteger(input)` for numeric inputs to avoid validating data corrupted by IEEE 754 truncation.
 
 ### 4.4 The Final Solution
 ```javascript
@@ -177,8 +177,8 @@ const isPandigital = (input) => {
         str = String(input);
     }
 
-    // Strict 10-digit guard for 0-9 permutation
-    return str.length === 10 && checkStringBitmask(str);
+    // Strict 10-digit minimum for 0-9 presence
+    return str.length >= 10 && checkStringBitmask(str);
 };
 ```
 

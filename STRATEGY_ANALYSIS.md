@@ -169,6 +169,7 @@ const shuffleArray = (array) => {
 #### 3.2.4 Deep Insight: Resource Stewardship & Stability
 A "Google-tier" implementation goes beyond basic logic to address system-level concerns:
 
+*   **Algorithmic Efficiency:** The Fisher-Yates algorithm operates in strictly **$O(N)$ time** and **$O(1)$ auxiliary space**, providing the theoretical maximum efficiency for array permutations.
 *   **Entropy Stewardship (Shared Cursor):** Naive implementations call `crypto.getRandomValues` on every shuffle or refill a massive buffer every time. By persisting the `sharedCursor`, we consume only the entropy required, amortizing the cost of the cryptographic system call across multiple function invocations.
 *   **Universal Compatibility (Legacy Adapter):** We bridge the gap between Modern Web Crypto and legacy Node.js ($<$v19) by wrapping `randomFillSync`. This prevents a "Silent Downgrade" to weak randomness in older environments.
 *   **W3C Spec Compliance:** The adapter explicitly returns the buffer, satisfying the W3C signature and preventing breakage in code that relies on method chaining.
@@ -238,7 +239,7 @@ I refined the Bitmask approach to prioritize mathematical accuracy over simple p
 
 1. **At-Least-Once Definition:** Formal pandigital numbers contain each digit *at least* once. My implementation handles strings like "11223344556677889900" correctly, whereas a naive permutation check would fail.
 2. **Defensive Validation:** Every character is screened in a single pass. If any non-digit character (including dots or letters) is encountered, the function returns `false` immediately, ensuring it only detects pure integers.
-3. **Zero Heap Allocation:** Unlike a `Set`, which creates a new object and triggers potential garbage collection, this bitmask remains strictly on the stack.
+3. **Zero Heap Allocation:** Bitmasking was chosen over a Set to eliminate heap allocation and garbage collection overhead, providing a constant-time check with zero memory footprint. This remains strictly on the stack, which is critical for high-frequency low-latency utility functions.
 4. **Precision Safety:** We explicitly check `Number.isSafeInteger()` to prevent false positives caused by the float-based precision limits of the JavaScript `Number` type.
 
 ## 4. Part 1: Software Engineering Project - Group B (System Design)
@@ -283,152 +284,71 @@ The requirement to "reorganize list" implies moving an item from index $A$ to in
  */
 
 // Define valid statuses as constants to ensure data integrity
-const TaskStatus = {
-  TODO: 'To Do',
-  IN_PROGRESS: 'In Progress',
-  DONE: 'Done'
-};
+const TaskStatus = Object.freeze({
+    NEW: 'New',
+    WORKING: 'Working on',
+    FINISHED: 'Finished'
+});
 
 class Task {
-  /**
-   * Creates a new Task instance.
-   * @param {number} id - Unique identifier.
-   * @param {string} title - Short summary of the task.
-   * @param {string} description - Detailed context.
-   * @param {string} dueDate - ISO date string or dateable string.
-   */
-  constructor(id, title, description, dueDate) {
-    this.id = id;
-    this.title = title;
-    this.description = description;
-    // Store date as a Date object for easier sorting/formatting later
-    this.dueDate = new Date(dueDate);
-    this.status = TaskStatus.TODO; // Default status
-    this.createdAt = new Date(); // Audit trail
-  }
-
-  /**
-   * Updates specific fields of the task.
-   * Uses destructuring to allow partial updates.
-   * @param {Object} updates - Object containing fields to update.
-   */
-  update({ title, description, dueDate, status }) {
-    if (title) this.title = title;
-    if (description) this.description = description;
-    if (dueDate) this.dueDate = new Date(dueDate);
-    
-    // Validate status before assignment
-    if (status) {
-      const validStatuses = Object.values(TaskStatus);
-      if (validStatuses.includes(status)) {
-        this.status = status;
-      } else {
-        console.warn(`Invalid status '${status}'. Update ignored.`);
-      }
+    constructor(id, title, description = "", dateDue = null) {
+        if (!title || title.trim() === '') throw new Error('Title is required');
+        
+        this.id = id;
+        this.title = title.trim();
+        this.description = description.trim();
+        this.status = TaskStatus.NEW;
+        this.createdAt = new Date();
+        this.updatedAt = new Date();
+        this.dateDue = dateDue ? new Date(dateDue) : null;
     }
-  }
 }
 
 class TodoList {
-  constructor() {
-    this.tasks = [];
-    this.idCounter = 1; // Simple auto-incrementing ID mechanism
-  }
-
-  /**
-   * Adds a new task to the list.
-   * @returns {Task} The newly created task.
-   */
-  add(title, description, dueDate) {
-    const newTask = new Task(this.idCounter++, title, description, dueDate);
-    this.tasks.push(newTask);
-    return newTask;
-  }
-
-  /**
-   * Deletes a task by its ID.
-   * @param {number} id 
-   * @returns {boolean} True if deleted, false if not found.
-   */
-  delete(id) {
-    const initialLength = this.tasks.length;
-    this.tasks = this.tasks.filter(task => task.id !== id);
-    return this.tasks.length < initialLength;
-  }
-
-  /**
-   * Edits a task by its ID.
-   * @param {number} id 
-   * @param {Object} updates 
-   * @returns {Task|null} The updated task or null if not found.
-   */
-  edit(id, updates) {
-    const task = this.tasks.find(t => t.id === id);
-    if (!task) return null;
-    task.update(updates);
-    return task;
-  }
-
-  /**
-   * Reorganizes the list by moving a task from one position to another.
-   * Uses array splicing for efficient in-place movement.
-   * @param {number} fromIndex - Current index of the task.
-   * @param {number} toIndex - Desired index.
-   */
-  reorganize(fromIndex, toIndex) {
-    // 1. Boundary Checks
-    if (fromIndex < 0 || fromIndex >= this.tasks.length || 
-        toIndex < 0 || toIndex >= this.tasks.length) {
-      throw new RangeError(`Reorganize failed: Index ${fromIndex} or ${toIndex} is out of bounds (valid: 0..${this.tasks.length - 1}).`);
+    constructor() {
+        this.tasksMap = new Map();
+        this.taskOrder = [];
     }
 
-    // 2. Remove from old position
-    // splice returns an array of removed items, destructuring extracts the first one.
-    const [movedTask] = this.tasks.splice(fromIndex, 1);
+    add(title, description, dateDue) {
+        const id = crypto.randomUUID();
+        const newTask = new Task(id, title, description, dateDue);
+        this.tasksMap.set(id, newTask);
+        this.taskOrder.push(id);
+        return id;
+    }
 
-    // 3. Insert into new position
-    this.tasks.splice(toIndex, 0, movedTask);
-  }
+    // --- Positional Helpers (User Interface Support) ---
 
-  /**
-   * Utility to visualize the list state in the console.
-   */
-  printState() {
-    console.log(`\n--- Todo List (${this.tasks.length} items) ---`);
-    this.tasks.forEach((t, i) => {
-      console.log(`${i}. [${t.status}] ${t.title} (Due: ${t.dueDate.toLocaleDateString()})`);
-    });
-    console.log('----------------------------------\n');
-  }
+    moveUp(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index > 0) this._swap(index, index - 1);
+    }
+
+    moveDown(id) {
+        const index = this.taskOrder.indexOf(id);
+        // [SAFETY] Strict check ensures index < length - 1 to prevent out-of-bounds
+        if (index !== -1 && index < this.taskOrder.length - 1) {
+            this._swap(index, index + 1);
+        }
+    }
+
+    moveToTop(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index > 0) {
+            const [movedId] = this.taskOrder.splice(index, 1);
+            this.taskOrder.unshift(movedId);
+        }
+    }
+
+    _swap(idxA, idxB) {
+        [this.taskOrder[idxA], this.taskOrder[idxB]] = [this.taskOrder[idxB], this.taskOrder[idxA]];
+    }
+
+    getAll() {
+        return this.taskOrder.map(id => ({ ...this.tasksMap.get(id) }));
+    }
 }
-
-// --- META: Verification Script ---
-// This section simulates a user interacting with the application.
-const myTracker = new TodoList();
-
-// --- MOCK DATA INJECTION ---
-// Simulating initial state for demonstration purposes
-console.log("Action: Injecting Mock Data...");
-myTracker.add("Finish Forge Challenge", "Complete code and essays", "2026-01-30");
-myTracker.add("Buy Groceries", "Milk, Coffee, Bread", "2026-02-01");
-myTracker.add("Call Mentor", "Discuss internship goals", "2026-01-28");
-
-myTracker.printState();
-
-console.log("Action: Completing 'Call Mentor'...");
-// Assuming 'Call Mentor' is ID 3 (since it was added 3rd)
-myTracker.edit(3, { status: TaskStatus.DONE });
-
-console.log("Action: Reorganizing 'Buy Groceries' to the top...");
-// 'Buy Groceries' is at index 1. Moving to index 0.
-myTracker.reorganize(1, 0);
-
-myTracker.printState();
-
-console.log("Action: Deleting 'Finish Forge Challenge' (ID 1)...");
-myTracker.delete(1);
-
-myTracker.printState();
 ```
 
 ### 4.2 Question B2: Database Design (Relational Schema)
@@ -488,14 +408,12 @@ erDiagram
     }
 
     ENROLLMENT {
-        int enrollment_id PK
         int student_id FK
         string course_code FK
         string grade "Optional attribute of the relationship"
     }
 
     CLUB_MEMBERSHIP {
-        int membership_id PK
         int student_id FK
         int club_id FK
         string role "e.g. Member, Treasurer"
@@ -508,8 +426,9 @@ erDiagram
 The database is organized into three strong entity tables (`STUDENT`, `COURSE`, `CLUB`) and two associative tables (`ENROLLMENT`, `CLUB_MEMBERSHIP`). Access is managed via SQL Joins. To retrieve a list of all clubs a specific student belongs to, one would query the `CLUB_MEMBERSHIP` table filtering by `student_id` and joining with the `CLUB` table to fetch names. This structure ensures that queries are optimized for specific access patterns without scanning unrelated data.
 
 **Relations and Foreign Keys**:
-*   **Primary Keys (PK)**: Every table has a unique identifier (e.g., `student_id`, `club_id`). This ensures row uniqueness.
-*   **Foreign Keys (FK)**: The associative tables contain FKs linking back to the strong entities. `ENROLLMENT.student_id` links to `STUDENT.student_id`. This enforces **Referential Integrity**—you cannot enroll a non-existent student in a class.
+*   **Primary Keys (PK)**: Every strong entity table has a unique numeric PK or natural code PK.
+*   **Composite Keys (Integrity)**: Associative tables like `ENROLLMENT` and `CLUB_MEMBERSHIP` utilize **Composite Primary Keys** (e.g., `student_id` + `course_code` in Enrollment). This enforces business rules at the database level—preventing a student from being enrolled in the same course twice—and serves as a natural clustered index for performance.
+*   **Foreign Keys (FK)**: Associative tables contain FKs linking back to the strong entities. `ENROLLMENT.student_id` links to `STUDENT.student_id`. This enforces **Referential Integrity**—you cannot enroll a non-existent student in a class.
 
 **Redundancy Prevention**:
 By adhering to Third Normal Form (3NF), we eliminate redundancy. For example, the `meeting_time` of a club is stored exactly once in the `CLUB` table. If the meeting time changes, we update one record. In a denormalized system (e.g., a spreadsheet), this info might be repeated next to every member's name, leading to data anomalies if inconsistent updates occur. This design prioritizes data consistency (ACID properties) which is crucial for reliable record-keeping.
@@ -529,8 +448,8 @@ Your resume demonstrates your vertical depth (coding skills). This essay must de
 *   Creativity/Arts: e.g., "I play jazz piano" (shows improvisation and pattern recognition).
 *   Service: e.g., "I volunteer at a food bank" (shows empathy and mission alignment).
 
-**Draft Answer (The "Resilient Learner" Archetype)**:
-"While my resume highlights my academic achievements, it doesn't capture my dedication to the art of sourdough baking—a hobby that has unexpectedly sharpened my engineering mindset. Baking, much like coding, is a science of variables: temperature, hydration, and timing must be precisely controlled. When I first started, my loaves were dense and unappealing. Instead of quitting, I treated each failure as a debugging session, documenting variables and iterating on my process. This practice has taught me patience and the importance of analyzing failure without judgment. It has also instilled in me a love for community; there is no greater joy than breaking bread I’ve made with friends. I bring this same iterative resilience and community focus to my technical teams, understanding that the best products, like the best bread, require patience, precision, and a willingness to learn from every mistake."
+**Draft Answer (The "User-Empathy" Archetype)**:
+"While my resume highlights the algorithms I built for China Fun Restaurants, it doesn't capture the reality of the years I spent managing the floor. Long nights spent mediating disputes between kitchen staff and calming customers during a dinner rush gave me a 'service-first' engineering philosophy. When I built the inventory forecasting model, I wasn't just optimizing a Python script; I was trying to save the prep cooks from staying late to throw away unused food. I learned that the best software doesn't just run efficiently; it respects the labor of the people using it. This background has made me an engineer who prioritizes user empathy and operational reality just as much as Big O notation. I build tools to solve human problems, not just technical ones."
 
 ### 5.2 Essay 2: Internship Intent
 **Prompt**: What are you looking for in an internship? (150 words)
@@ -538,8 +457,8 @@ Your resume demonstrates your vertical depth (coding skills). This essay must de
 **Strategy: Alignment with Forge's Mission**
 Forge prepares students for "modern skills" and "impact". They want interns who are "coachable" yet "autonomous." Do not say "I want a job to make money." Say "I want to solve problems."
 
-**Draft Answer (The "Impact-Driven" Archetype)**:
-"I am seeking an internship that functions as a bridge between academic theory and real-world impact. In the classroom, assignments often exist in a vacuum, but I am eager to contribute to software that solves tangible problems for actual users. Specifically, I am looking for an environment that balances mentorship with autonomy—a place where I can learn architectural best practices from senior engineers while being trusted to own the implementation of specific features. Forge’s mission to empower students to do good resonates with me; I want to work with a company that views technology not just as a tool for profit, but as a lever for social change. Ultimately, I am looking for a challenge that will push me out of my comfort zone and a community that will support me as I grow into a professional engineer."
+**Draft Answer (The "Growth-Minded" Archetype)**:
+"I have frequently worn the hat of 'Lead Engineer' out of necessity, architecting full-stack solutions for my startup and internships. However, I am seeking an internship to experience the rigor of an established engineering culture. When you build alone, you can move fast, but you often miss the blind spots that only a senior engineer's code review can reveal. I am looking for an environment where 'it works' is not the bar for success—where maintainability, scalability, and clean code principles are enforced. I want to have my design patterns challenged by mentors who have seen systems fail at a scale I haven't touched yet. My goal is to transition from being a capable 'builder' to a disciplined 'engineer,' learning the industry standards that turn a working prototype into reliable, long-term software infrastructure."
 
 ## 6. Deliverables and Submission Checklist
 
@@ -549,7 +468,7 @@ The final step is the assembly of the "Single Google Doc." This is where attenti
 The prompt asks for "resources used, time taken, courses taken."
 *   **Resources Used**: Be honest but professional. Cite "MDN Web Docs" (authoritative), "StackOverflow" (resourceful), and "The Forge Prompt" (attentive).
 *   **Time Taken**: A realistic high-quality submission takes 3-5 hours. (1 hr algorithms, 2 hrs system design, 1 hr essays/polish). Reporting 30 minutes implies carelessness; reporting 20 hours implies struggle.
-*   **Courses Taken**: List relevant coursework like "Data Structures & Algorithms," "Web Development," or "Database Systems." If you are self-taught, list "Self-Study: Full Stack Open" or similar reputable resources.
+*   **Courses Taken**: List specific course codes to demonstrate academic rigor, such as `CSCI 1112: Algorithms & Data Structures`, `CSCI 2541W: Database Systems`, and `CSCI 2113: Software Engineering`.
 
 ### 6.2 Formatting the Google Doc
 *   **Title**: "Forge Launch Application: Software Engineering Skills Challenge - [Name]"

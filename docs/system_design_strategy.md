@@ -35,21 +35,22 @@ To manage application state effectively, we utilize two primary classes:
 "use strict";
 
 const TaskStatus = Object.freeze({
-    PENDING: 'pending',
-    IN_PROGRESS: 'in_progress',
-    COMPLETED: 'completed'
+    NEW: 'New',
+    WORKING: 'Working on',
+    FINISHED: 'Finished'
 });
 
 class Task {
-    constructor(id, description) {
-        if (!description || typeof description !== 'string' || description.trim() === '') {
-            throw new Error('Task description must be a non-empty string.');
-        }
+    constructor(id, title, description = "", dateDue = null) {
+        if (!title || title.trim() === '') throw new Error('Title is required');
+        
         this.id = id;
+        this.title = title.trim();
         this.description = description.trim();
-        this.status = TaskStatus.PENDING;
+        this.status = TaskStatus.NEW;
         this.createdAt = new Date();
-        this.updatedAt = new Date(); // [AUDIT] Modification tracking
+        this.updatedAt = new Date();
+        this.dateDue = dateDue ? new Date(dateDue) : null;
     }
 }
 
@@ -78,21 +79,38 @@ class TodoList {
         });
     }
 
-    add(description) {
+    add(title, description = "", dateDue = null) {
         const id = this._generateId();
-        const newTask = new Task(id, description);
+        const newTask = new Task(id, title, description, dateDue);
         this.tasksMap.set(id, newTask);
         this.taskOrder.push(id);
         return id;
     }
 
-    reorganize(fromIndex, toIndex) {
-        if (fromIndex < 0 || fromIndex >= this.taskOrder.length ||
-            toIndex < 0 || toIndex >= this.taskOrder.length) {
-            throw new RangeError('Reorganize failed: Index out of bounds.');
+    // --- Positional Helpers (Requested) ---
+
+    moveUp(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index > 0) this._swap(index, index - 1);
+    }
+
+    moveDown(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index !== -1 && index < this.taskOrder.length - 1) {
+            this._swap(index, index + 1);
         }
-        const [movedId] = this.taskOrder.splice(fromIndex, 1);
-        this.taskOrder.splice(toIndex, 0, movedId);
+    }
+
+    moveToTop(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index > 0) {
+            const [movedId] = this.taskOrder.splice(index, 1);
+            this.taskOrder.unshift(movedId);
+        }
+    }
+
+    _swap(idxA, idxB) {
+        [this.taskOrder[idxA], this.taskOrder[idxB]] = [this.taskOrder[idxB], this.taskOrder[idxA]];
     }
 
     getAll() {
@@ -143,7 +161,6 @@ erDiagram
         string location
     }
     ENROLLMENT {
-        int enrollment_id PK
         int student_id FK
         string course_code FK
         string grade
@@ -154,7 +171,6 @@ erDiagram
         int president_id FK
     }
     CLUB_MEMBERSHIP {
-        int membership_id PK
         int student_id FK
         int club_id FK
         string role
@@ -163,7 +179,7 @@ erDiagram
 
 ### 3.3 Data Integrity Constraints
 
-* **Composite Unique Constraints:** `UNIQUE(student_id, course_code)` prevents duplicate enrollments.
+* **Composite Primary Keys:** Using `(student_id, course_code)` as a PK prevents duplicate enrollments and speeds up relationship lookups via clustered indexes.
 * **Referential Integrity:** `ON DELETE CASCADE` ensures deleting a student cleanses their enrollments automatically.
 
 ### 3.4 DDL Scripts (PostgreSQL)
@@ -190,21 +206,19 @@ CREATE TABLE clubs (
     president_id INT REFERENCES students(student_id)
 );
 
--- Junction Tables with Integrity Constraints
+-- Junction Tables with Composite Keys
 CREATE TABLE enrollments (
-    enrollment_id SERIAL PRIMARY KEY,
     student_id INT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
     course_code VARCHAR(10) NOT NULL REFERENCES courses(course_code) ON DELETE CASCADE,
     grade CHAR(2),
-    CONSTRAINT unique_student_course UNIQUE (student_id, course_code)
+    PRIMARY KEY (student_id, course_code)
 );
 
 CREATE TABLE club_memberships (
-    membership_id SERIAL PRIMARY KEY,
     student_id INT NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
     club_id INT NOT NULL REFERENCES clubs(club_id) ON DELETE CASCADE,
     role VARCHAR(50) DEFAULT 'Member',
-    CONSTRAINT unique_student_club UNIQUE (student_id, club_id)
+    PRIMARY KEY (student_id, club_id)
 );
 
 -- Performance Indexing

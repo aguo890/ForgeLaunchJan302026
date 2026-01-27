@@ -937,3 +937,35 @@ Implemented a comprehensive enhancement to the task management system:
 - **Change Detection**: The `hasChanged` flag prevents unnecessary `updatedAt` modifications, reducing side effects and improving performance for bulk operations.
 - **Explicit Field Mapping**: By restricting editable fields to `['title', 'description', 'dateDue', 'status']`, we prevent accidental overwriting of metadata like `id` or `createdAt`.
 - **Positional Helpers**: While `reorganize()` provides low-level control, the new helpers offer intuitive
+
+## [2026-01-26 19:48] Major Architectural Refactor: TodoList System
+
+### Context/Problem
+The initial TodoList implementation had several architectural limitations:
+1. **ID Management**: Used simple auto-incrementing integers (`idCounter++`) which is problematic in distributed systems and doesn't guarantee uniqueness across sessions
+2. **Data Structure**: Used a single array (`this.tasks`) for both storage and ordering, mixing concerns
+3. **Reorganization API**: Exposed low-level `reorganize(fromIndex, toIndex)` requiring callers to manage indices directly
+4. **Status Constants**: Used verbose business-oriented statuses (`'To Do'`, `'In Progress'`, `'Done'`) instead of semantic states
+
+### Solution/Implementation
+Implemented a **separation of concerns** architecture:
+
+1. **UUID-based Identity**: Replaced sequential IDs with `crypto.randomUUID()` for guaranteed uniqueness
+2. **Dual Data Structure Pattern**: 
+   - `Map` for O(1) lookup by ID (`this.tasksMap`)
+   - `Array` for maintaining order (`this.taskOrder`)
+3. **Intent-Based API**: Added semantic methods `moveUp(id)`, `moveDown(id)`, `moveToTop(id)` instead of exposing indices
+4. **Immutable Status Enum**: Used `Object.freeze()` to create a truly immutable status enumeration
+5. **Data Validation**: Added constructor validation for required fields (title cannot be empty)
+
+### Rationale/Logic
+- **UUIDs** provide collision resistance and eliminate the need for centralized ID generation, making the system stateless and horizontally scalable
+- **Map + Array separation** gives us O(1) lookups while maintaining ordered traversal - this is a classic space-time tradeoff that pays dividends in UI scenarios where both random access and ordered display are needed
+- **Intent-based API** follows the principle of least privilege - UI components shouldn't need to know about array indices, just the semantic intent
+- **Immutable enums** prevent accidental mutation of constants, a common source of bugs in JavaScript
+- The `_swap()` helper uses **array destructuring** for an elegant, single-line implementation of element swapping
+
+### Outcome
+- Created a more robust foundation for UI integration (components can call `moveUp()` without calculating indices)
+- Improved data integrity with UUIDs and validation
+- Maintained backward compatibility through the `
