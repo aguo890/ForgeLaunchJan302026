@@ -133,7 +133,7 @@ const isPandigital = (input) => {
     if (typeof input === 'number') {
         // [OPTIMIZATION] Small numbers cannot be pandigital
         if (input < 1023456789) return false;
-        // [SAFETY] Guard against IEEE 754 precision loss
+        // [SAFETY] Guard against IEEE 754 precision loss for very large numbers
         if (!Number.isSafeInteger(input)) return false;
 
         str = String(input);
@@ -142,9 +142,9 @@ const isPandigital = (input) => {
         str = String(input);
     }
 
-    // [STRICTNESS] A 0-9 pandigital number must be exactly 10 digits.
-    // Provides O(1) rejection for long strings and ensures strict permutation.
-    if (str.length !== 10) return false;
+    // [STRICTNESS] Input must be at least 10 digits to contain 0-9.
+    // We remove the 10-char "guard" to support the formal definition (at least once).
+    if (str.length < 10) return false;
 
     return checkStringBitmask(str);
 };

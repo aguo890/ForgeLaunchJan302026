@@ -86,19 +86,21 @@ const shuffleArray = (array) => {
 // --- A2: Pandigital Detection ---
 const isPandigital = (input) => {
     const numString = String(input);
-    const uniqueDigits = new Set();
+    if (numString.length < 10) return false;
+
+    let mask = 0;
+    const TARGET_MASK = 0b1111111111;
 
     for (const char of numString) {
-        // Strict char comparison is faster than Regex
-        if (char >= '0' && char <= '9') {
-            uniqueDigits.add(char);
-        }
+        const code = char.charCodeAt(0);
+        // Ensure entire input is digits
+        if (code < 48 || code > 57) return false;
 
-        // Optimization: If we already found all 10, we can exit early.
-        if (uniqueDigits.size === 10) return true;
+        const digit = code - 48;
+        mask |= (1 << digit);
     }
 
-    return uniqueDigits.size === 10;
+    return mask === TARGET_MASK;
 };
 
 // --- B1: TodoList Architecture ---

@@ -710,3 +710,40 @@ The addition creates consistency across documentation:
 ### Minor Technical Refinements:
 - **QA timestamp precision**: Updated `autocommit.py` to include hours/minutes/seconds in QA report dates (from `%Y-%m-%d` to `%Y-%m-%d %H:%M:%S`)
   - **Why**: Provides finer-grained audit trail for
+
+## [2026-01-26 19:10] Refined Pandigital Algorithm: Mathematical Correctness Over Permutation Guard
+
+### Context/Problem
+The original `isPandigital` implementation contained a **strict length guard** (`str.length === 10`) that incorrectly rejected valid pandigital numbers according to the formal mathematical definition. While this guard provided O(1) rejection for DoS protection, it failed to recognize numbers like `10234567890` (11 digits) that contain all digits 0-9 at least once but aren't strict permutations.
+
+### Solution/Implementation
+1. **Changed length validation** from `str.length === 10` to `str.length >= 10` in both `src/algorithms.js` and `scripts/verify_submission.js`
+2. **Updated documentation** in `STRATEGY_ANALYSIS.md` to clarify the "at-least-once" definition
+3. **Refactored verification script** to use bitmask implementation (previously used Set-based approach)
+4. **Enhanced input validation** with explicit digit checking via character codes in the verification script
+
+### Rationale/Logic
+**Trade-off Analysis:**
+- **Before:** Strict 10-digit guard provided O(1) DoS protection but violated mathematical correctness
+- **After:** Minimum 10-digit check preserves correctness while maintaining O(n) worst-case (still efficient)
+
+**Performance Implications:**
+- **Bitmask remains O(1) space** - uses integer register instead of heap allocation
+- **Early return optimization** - still rejects strings <10 digits in O(1) time
+- **Single-pass validation** - checks digits and builds mask simultaneously with O(n) time complexity
+
+**Mathematical Integrity:**
+The formal definition of pandigital numbers requires "containing each digit at least once" not "exactly once." This change aligns the implementation with mathematical correctness while maintaining all performance benefits of the bitmask approach.
+
+### Outcome
+- **All tests pass** - verification script shows 100% success rate
+- **Statistical uniformity preserved** - Fisher-Yates shuffle distribution remains within 2% tolerance
+- **Documentation updated** - technical rationale now emphasizes mathematical correctness over permutation checking
+- **Code consistency achieved** - both source and verification scripts use identical bitmask logic
+
+---
+
+## [2026-01-26 19:10] Verification Script Alignment
+
+### Context/Problem
+The verification script (`
