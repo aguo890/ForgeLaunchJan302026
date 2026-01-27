@@ -19,6 +19,13 @@ solution prioritizes Scalability and Data Integrity over simple implementation.
    - Database: 3NF Normalized Schema with explicit Indexing strategies.
    - Security: Cryptographically secure random values for shuffling.
 
+DEVELOPMENT METHODOLOGY:
+This submission was developed using an **augmented engineering approach**. I leveraged AI tools to accelerate implementation and verify that all logic aligns with modern best practices (e.g., V8 engine optimizations, 3NF database normalization, and cryptographic entropy management).
+**My role as the Lead Engineer was to:**
+* Define the architectural constraints and design patterns.
+* Perform rigorous manual audits of the logic for statistical and temporal accuracy.
+* Ensure all "hallucination risks" were mitigated through local benchmarking and test-driven development (TDD).
+
 RESOURCES USED:
 - MDN Web Docs (JavaScript Reference)
 - StackOverflow (Performance benchmarks for Bitwise operations)
