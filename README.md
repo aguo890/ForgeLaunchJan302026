@@ -49,7 +49,6 @@ node --test test/*.test.js         # Direct command (no Make)
 |------|-------------|-------------|
 | **`algorithms.js`** | Group A algorithms: Fisher-Yates shuffle with crypto entropy, 0-9 Pandigital detection via bitmask | `shuffleArray`, `isPandigital` |
 | **`system_design.js`** | Group B: Headless MVC TodoList with O(1) operations, immutable DTOs, TaskStatus enum | `TodoList`, `Task`, `TaskStatus` |
-| **`url_shortener.js`** | Bonus: URL shortening service implementation | — |
 
 ### `test/` — Test Suite
 
@@ -66,7 +65,8 @@ node --test test/*.test.js         # Direct command (no Make)
 | File | Description |
 |------|-------------|
 | **`algorithms_strategy.md`** | Technical deep-dive on algorithm design decisions |
-| **`system_design_strategy.md`** | Architecture rationale for ProductivityTracker |
+| **`productivity_tracker_strategy.md`** | Architecture rationale for ProductivityTracker (B1) |
+| **`database_design_strategy.md`** | Relational schema and normalization strategy (B2) |
 | **`essays.md`** | Short essays (personal story + internship goals) + meta-questions |
 | **`qa_report.md`** | QA verification report with test execution logs |
 | **`development_log.md`** | Iteration history and design decision changelog |

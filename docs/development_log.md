@@ -1015,3 +1015,36 @@ The approach recognizes that not all foreign key relationships have the same bus
 **Rationale/Logic:** This specification moves beyond a simple list of tables. It is a principled engineering document that makes explicit trade-offs:
 *   **UUIDv7 over BIGINT or UUIDv4**: Rejects sequential integers due to enumeration attack risks and random UUIDs due to index fragmentation. UUIDv7 provides **k-sortable** writes, preserving ~97% of integer insert performance while offering global uniqueness and non-enumerability.
 *   **BCNF over 3NF**: While Third Normal Form is often sufficient, the complex functional
+
+## [2026-01-26 20:20] Documentation Restructuring and Code Cleanup
+
+### Context/Problem
+The project documentation structure had become inconsistent. The `system_design_strategy.md` file contained content for both B1 (Productivity Tracker) and B2 (Database Design) questions, violating the single-responsibility principle for documentation. Additionally, the `url_shortener.js` file was listed in README but not implemented, creating misleading expectations.
+
+### Solution/Implementation
+1. **Split monolithic documentation** into two focused strategy documents:
+   - Created `productivity_tracker_strategy.md` for B1 (Headless MVC implementation)
+   - Created `database_design_strategy.md` for B2 (Relational schema design)
+   - Deleted the combined `system_design_strategy.md`
+
+2. **Updated README** to reflect the new documentation structure and removed the non-existent `url_shortener.js` from the file listing.
+
+3. **Maintained technical content** while improving organization - all substantive content from the original file was preserved and properly categorized.
+
+### Rationale/Logic
+- **Separation of Concerns**: Each document now addresses exactly one project requirement, making navigation easier for reviewers
+- **Maintainability**: Future updates to either topic can be made independently without affecting unrelated content
+- **Clarity**: The README now accurately reflects the actual project structure, preventing confusion about what's implemented
+- **Professional Presentation**: Clean, focused documentation demonstrates attention to detail and professional standards
+
+### Outcome
+- Documentation structure now aligns with project requirements (B1 and B2 as separate concerns)
+- README provides accurate file inventory
+- All tests continue to pass (QA report shows 19ms execution time)
+- No functional code changes were made - this was purely a documentation refactor
+
+---
+
+**Minor Updates:**
+- Updated QA report timestamp to reflect current verification run
+- Maintained all technical content while improving organizational structure
