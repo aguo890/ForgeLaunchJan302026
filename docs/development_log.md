@@ -969,3 +969,31 @@ Implemented a **separation of concerns** architecture:
 - Created a more robust foundation for UI integration (components can call `moveUp()` without calculating indices)
 - Improved data integrity with UUIDs and validation
 - Maintained backward compatibility through the `
+
+## [2026-01-26 19:50] Enhanced Referential Integrity Strategy
+
+### Context/Problem
+The database schema needed to handle **referential integrity** more intelligently. While `ON DELETE CASCADE` works well for cleaning up relationship records (like enrollments), it creates a problem for **non-critical lookups** such as club presidents. If a student president leaves the school, cascading deletion would delete the entire club entity, which is operationally unacceptable.
+
+### Solution/Implementation
+Modified the foreign key constraint for `clubs.president_id` from a simple reference to use `ON DELETE SET NULL`. This change was applied in both the **system design documentation** (`docs/system_design_strategy.md`) and the **strategy analysis** (`STRATEGY_ANALYSIS.md`).
+
+**Key changes:**
+1. Updated DDL script: `president_id INT REFERENCES students(student_id) ON DELETE SET NULL`
+2. Added explanatory text about balancing data cleanliness with operational continuity
+
+### Rationale/Logic
+This implements a **tiered referential integrity strategy**:
+- **`ON DELETE CASCADE` for associative entities** (`ENROLLMENT`, `CLUB_MEMBERSHIP`): Ensures automatic cleanup of relationship records when a parent entity is deleted. This maintains data consistency without orphaned records.
+- **`ON DELETE SET NULL` for optional foreign keys** (`clubs.president_id`): Allows the club to persist when a president leaves, enabling administrative reassignment. This prioritizes **operational continuity** over strict data cleanup.
+
+The approach recognizes that not all foreign key relationships have the same business importance. **Associative tables** represent core business relationships that should be cleaned up, while **lookup references** may need to persist for operational reasons.
+
+### Outcome
+- **Verification**: The QA test suite passed successfully with updated timestamps
+- **Impact**: The database now supports realistic operational scenarios where student records can be removed without disrupting club operations
+- **Documentation**: Both technical and strategic documentation are now synchronized, providing clear rationale for the design decision
+
+**Minor updates:**
+- Updated timestamps in QA report and test summary
+- Fisher-Yates test results show continued statistical uniformity (all permutations within ~2% tolerance)

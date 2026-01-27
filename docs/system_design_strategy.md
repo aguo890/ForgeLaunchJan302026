@@ -180,7 +180,7 @@ erDiagram
 ### 3.3 Data Integrity Constraints
 
 * **Composite Primary Keys:** Using `(student_id, course_code)` as a PK prevents duplicate enrollments and speeds up relationship lookups via clustered indexes.
-* **Referential Integrity:** `ON DELETE CASCADE` ensures deleting a student cleanses their enrollments automatically.
+* **Referential Integrity:** `ON DELETE CASCADE` ensures deleting a student cleanses their enrollments automatically. We utilize `ON DELETE SET NULL` for club presidents to allow student records to be removed without deleting entire club entities, maintaining operational continuity.
 
 ### 3.4 DDL Scripts (PostgreSQL)
 
@@ -203,7 +203,7 @@ CREATE TABLE courses (
 CREATE TABLE clubs (
     club_id SERIAL PRIMARY KEY,
     club_name VARCHAR(100) UNIQUE NOT NULL,
-    president_id INT REFERENCES students(student_id)
+    president_id INT REFERENCES students(student_id) ON DELETE SET NULL
 );
 
 -- Junction Tables with Composite Keys

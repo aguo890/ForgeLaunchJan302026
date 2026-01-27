@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-27T00:48:15.489Z",
+  "timestamp": "2026-01-27T00:50:05.425Z",
   "overall_status": "PASS",
   "tests": {
     "fisher_yates": {
@@ -11,12 +11,12 @@
           "iterations": 60000,
           "tolerance_percent": 2,
           "permutation_counts": {
-            "123": 9928,
-            "132": 10102,
-            "213": 10051,
-            "231": 9907,
-            "312": 9964,
-            "321": 10048
+            "123": 9859,
+            "132": 10071,
+            "213": 9901,
+            "231": 10185,
+            "312": 9989,
+            "321": 9995
           },
           "comment": "Statistically uniform"
         }

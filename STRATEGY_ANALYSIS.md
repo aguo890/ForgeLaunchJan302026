@@ -428,7 +428,7 @@ The database is organized into three strong entity tables (`STUDENT`, `COURSE`, 
 **Relations and Foreign Keys**:
 *   **Primary Keys (PK)**: Every strong entity table has a unique numeric PK or natural code PK.
 *   **Composite Keys (Integrity)**: Associative tables like `ENROLLMENT` and `CLUB_MEMBERSHIP` utilize **Composite Primary Keys** (e.g., `student_id` + `course_code` in Enrollment). This enforces business rules at the database level—preventing a student from being enrolled in the same course twice—and serves as a natural clustered index for performance.
-*   **Foreign Keys (FK)**: Associative tables contain FKs linking back to the strong entities. `ENROLLMENT.student_id` links to `STUDENT.student_id`. This enforces **Referential Integrity**—you cannot enroll a non-existent student in a class.
+*   **Foreign Keys (FK)**: Associative tables contain FKs linking back to the strong entities. `ENROLLMENT.student_id` links to `STUDENT.student_id`. This enforces **Referential Integrity**—you cannot enroll a non-existent student in a class. We utilize `ON DELETE CASCADE` for relationship records and `ON DELETE SET NULL` for non-critical lookups (like club presidents) to balance data cleanliness with record persistence.
 
 **Redundancy Prevention**:
 By adhering to Third Normal Form (3NF), we eliminate redundancy. For example, the `meeting_time` of a club is stored exactly once in the `CLUB` table. If the meeting time changes, we update one record. In a denormalized system (e.g., a spreadsheet), this info might be repeated next to every member's name, leading to data anomalies if inconsistent updates occur. This design prioritizes data consistency (ACID properties) which is crucial for reliable record-keeping.
