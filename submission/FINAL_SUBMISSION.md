@@ -190,8 +190,13 @@ class ProductivityTracker {
      * @param {string} dueDate - Expected completion date.
      */
     addItem(title, description, dueDate) {
+        // Requirement: "Collision-resistant UUIDs" (Standard professional practice)
+        const id = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+            ? crypto.randomUUID() 
+            : '_' + Math.random().toString(36).substr(2, 9);
+
         const task = {
-            id: '_' + Math.random().toString(36).substr(2, 9), // Simple unique ID
+            id: id,
             title: title || "Untitled Task",
             description: description || "",
             dateCreated: new Date(),
@@ -200,7 +205,7 @@ class ProductivityTracker {
         };
         
         this.tasks.push(task);
-        console.log(`Added: "${task.title}"`);
+        console.log(`Added: "${task.title}" (ID: ${id})`);
     }
 
     /**
@@ -225,12 +230,20 @@ class ProductivityTracker {
         const task = this.tasks.find(t => t.id === id);
         if (!task) return;
 
-        // Apply updates selectively
-        if (updates.title) task.title = updates.title;
-        if (updates.description) task.description = updates.description;
-        if (updates.dueDate) task.dueDate = new Date(updates.dueDate);
-        if (updates.status && Object.values(STATUS).includes(updates.status)) {
-            task.status = updates.status;
+        // [SAFETY] Use hasOwnProperty to allow setting values to empty strings or 0
+        if (Object.prototype.hasOwnProperty.call(updates, 'title')) {
+            task.title = updates.title;
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'description')) {
+            task.description = updates.description;
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'dueDate')) {
+            task.dueDate = updates.dueDate ? new Date(updates.dueDate) : null;
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+            if (Object.values(STATUS).includes(updates.status)) {
+                task.status = updates.status;
+            }
         }
     }
 
