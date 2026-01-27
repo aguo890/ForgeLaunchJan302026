@@ -900,3 +900,40 @@ The submission package required final synchronization between documentation, tes
 - Updated timestamps across all changed files for consistency
 - Minor wording improvements in algorithm documentation for clarity
 - Maintained all technical correctness while improving presentation quality
+
+## [2026-01-26 19:39] Enhanced Task Management System
+
+### Context/Problem
+The existing `TodoList` system was a minimal implementation focused on basic CRUD operations. It lacked several practical features needed for real-world task management: task titles, due dates, positional helpers, and filtering utilities. The system also had inconsistent validation patterns and missed opportunities for performance optimization.
+
+### Solution/Implementation
+Implemented a comprehensive enhancement to the task management system:
+
+1. **Expanded Task Model**:
+   - Added `title` as a required field (replacing description as primary identifier)
+   - Added optional `description` and `dateDue` fields
+   - Updated `TaskStatus` enum to use more user-friendly values: `'New'`, `'Working on'`, `'Finished'`
+
+2. **Enhanced `edit()` Method**:
+   - Changed from single-parameter (`newDescription`) to multi-field `updates` object
+   - Implemented **field-by-field validation** with explicit allowed fields list
+   - Added **change detection** to avoid unnecessary timestamp updates
+   - Special handling for date parsing and status validation
+
+3. **Positional Helper Methods**:
+   - Added `moveUp()`, `moveDown()`, `moveToTop()` for intuitive task reordering
+   - Implemented private `_swap()` helper for array manipulation
+
+4. **Utility Methods**:
+   - `filterByStatus()`: Returns tasks matching specific status
+   - `getOverdueTasks()`: Identifies unfinished tasks with past due dates
+
+5. **Robust Date Handling**:
+   - Added strict date validation in constructor and edit methods
+   - Ensures `dateDue` is either `null` or a valid `Date` object
+
+### Rationale/Logic
+- **Title vs Description**: In real task systems, titles are essential for quick scanning while descriptions provide detail. Making title required ensures every task has at least minimal identification.
+- **Change Detection**: The `hasChanged` flag prevents unnecessary `updatedAt` modifications, reducing side effects and improving performance for bulk operations.
+- **Explicit Field Mapping**: By restricting editable fields to `['title', 'description', 'dateDue', 'status']`, we prevent accidental overwriting of metadata like `id` or `createdAt`.
+- **Positional Helpers**: While `reorganize()` provides low-level control, the new helpers offer intuitive

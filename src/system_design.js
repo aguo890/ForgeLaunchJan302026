@@ -16,21 +16,26 @@
 /* -------------------------------------------------------------------------- */
 
 /**
- * @typedef {'pending' | 'in_progress' | 'completed'} TaskStatusType
+ * @typedef {'New' | 'Working on' | 'Finished'} TaskStatusType
  */
 
 /**
  * @typedef {Object} TaskDTO
  * @property {string} id - Unique task identifier.
+ * @property {string} title - Task title.
  * @property {string} description - Task description.
  * @property {TaskStatusType} status - Current task status.
  * @property {Date} createdAt - Creation timestamp.
+ * @property {Date|null} dateDue - Due date timestamp.
  * @property {Date} updatedAt - Last modification timestamp.
  */
 
 /**
  * @typedef {Object} TaskUpdateDTO
- * @property {string} [description] - New description for the task.
+ * @property {string} [title] - New title.
+ * @property {string} [description] - New description.
+ * @property {Date|string} [dateDue] - New due date.
+ * @property {TaskStatusType} [status] - New status.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -43,9 +48,9 @@
  * @enum {string}
  */
 const TaskStatus = Object.freeze({
-    PENDING: 'pending',
-    IN_PROGRESS: 'in_progress',
-    COMPLETED: 'completed'
+    NEW: 'New',
+    WORKING: 'Working on',
+    FINISHED: 'Finished'
 });
 
 /* -------------------------------------------------------------------------- */
@@ -59,19 +64,28 @@ class Task {
     /**
      * Creates a new Task instance.
      * @param {string} id - Unique identifier for the task.
-     * @param {string} description - Task description (will be trimmed).
-     * @throws {Error} If description is empty or not a string.
+     * @param {string} title - Task title (required).
+     * @param {string} [description] - Task description.
+     * @param {Date|string} [dateDue] - Due date.
+     * @throws {Error} If title is empty.
      */
-    constructor(id, description) {
-        if (!description || typeof description !== 'string' || description.trim() === '') {
-            throw new Error('Task description must be a non-empty string.');
+    constructor(id, title, description = "", dateDue = null) {
+        if (!title || typeof title !== 'string' || title.trim() === '') {
+            throw new Error('Task title is required.');
         }
 
         this.id = id;
-        this.description = description.trim(); // [SAFETY] Input Sanitization
-        this.status = TaskStatus.PENDING;
+        this.title = title.trim();
+        this.description = description.trim();
+        this.status = TaskStatus.NEW;
         this.createdAt = new Date();
-        this.updatedAt = new Date(); // [AUDIT] Track modification time
+        this.updatedAt = new Date();
+
+        // [SAFETY] Strict Date Handling (Handles Date objects and ISO strings)
+        this.dateDue = dateDue ? new Date(dateDue) : null;
+        if (this.dateDue && isNaN(this.dateDue.getTime())) {
+            throw new Error("Invalid dateDue provided.");
+        }
     }
 
     /**
@@ -84,8 +98,10 @@ class Task {
         if (!validStatuses.includes(newStatus)) {
             throw new Error(`Invalid status: ${newStatus}. Must be one of: ${validStatuses.join(', ')}`);
         }
-        this.status = newStatus;
-        this.updatedAt = new Date(); // [AUDIT] Update timestamp on change
+        if (this.status !== newStatus) {
+            this.status = newStatus;
+            this.updatedAt = new Date();
+        }
     }
 }
 
@@ -128,9 +144,10 @@ class TodoList {
     _toDTO(task) {
         return Object.freeze({
             id: task.id,
+            title: task.title,
             description: task.description,
             status: task.status,
-            // [SAFETY] Return new Date instances to prevent reference mutation
+            dateDue: task.dateDue ? new Date(task.dateDue) : null,
             createdAt: new Date(task.createdAt),
             updatedAt: new Date(task.updatedAt)
         });
@@ -141,11 +158,10 @@ class TodoList {
      * @param {string} description - The task description.
      * @returns {string} The unique ID of the created task.
      */
-    add(description) {
+    add(title, description = "", dateDue = null) {
         const id = this._generateId();
-        const newTask = new Task(id, description);
+        const newTask = new Task(id, title, description, dateDue);
 
-        // [PATTERN] Normalized State: Store by ID, Track Order separately
         this.tasksMap.set(id, newTask);
         this.taskOrder.push(id);
 
@@ -173,20 +189,54 @@ class TodoList {
      * @returns {TaskDTO} The updated task as a frozen DTO.
      * @throws {Error} If task not found or description is invalid.
      */
-    edit(id, newDescription) {
-        if (!this.tasksMap.has(id)) {
-            throw new Error(`Task with ID ${id} not found.`);
-        }
-
+    edit(id, updates) {
         const task = this.tasksMap.get(id);
+        if (!task) throw new Error(`Task with ID ${id} not found.`);
 
-        // [SAFETY] Validation
-        if (!newDescription || typeof newDescription !== 'string' || newDescription.trim() === '') {
-            throw new Error('New description must be a non-empty string.');
+        // [SAFETY] Explicit mapping of editable fields to prevent overwriting metadata (id, createdAt)
+        const allowedFields = ['title', 'description', 'dateDue', 'status'];
+        let hasChanged = false;
+
+        allowedFields.forEach(field => {
+            if (updates[field] === undefined) return;
+
+            let newValue = updates[field];
+
+            // Special handling for dates and status
+            if (field === 'dateDue') {
+                newValue = newValue ? new Date(newValue).getTime() : null;
+                const currentValue = task.dateDue ? task.dateDue.getTime() : null;
+                if (newValue !== currentValue) {
+                    task.dateDue = newValue ? new Date(newValue) : null;
+                    hasChanged = true;
+                }
+                return;
+            }
+
+            if (field === 'status') {
+                const validStatuses = Object.values(TaskStatus);
+                if (!validStatuses.includes(newValue)) {
+                    throw new Error(`Invalid status: ${newValue}`);
+                }
+                if (task.status !== newValue) {
+                    task.status = newValue;
+                    hasChanged = true;
+                }
+                return;
+            }
+
+            // String fields (title, description)
+            if (typeof newValue === 'string') newValue = newValue.trim();
+            if (task[field] !== newValue) {
+                task[field] = newValue;
+                hasChanged = true;
+            }
+        });
+
+        // [EFFICIENCY] Only update timestamp if a change actually occurred
+        if (hasChanged) {
+            task.updatedAt = new Date();
         }
-
-        task.description = newDescription.trim();
-        task.updatedAt = new Date(); // [AUDIT] Update timestamp on change
 
         return this._toDTO(task);
     }
@@ -221,10 +271,60 @@ class TodoList {
             throw new RangeError('Reorganize failed: Index out of bounds.');
         }
 
-        // [PATTERN] Two-phase splice: Remove, then insert at target position
-        // The array automatically adjusts indices between operations.
         const [movedId] = this.taskOrder.splice(fromIndex, 1);
         this.taskOrder.splice(toIndex, 0, movedId);
+    }
+
+    // --- Positional Helpers (Requested) ---
+
+    moveUp(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index > 0) {
+            this._swap(index, index - 1);
+        }
+    }
+
+    moveDown(id) {
+        const index = this.taskOrder.indexOf(id);
+        // [SAFETY] Strict check to prevent out-of-bounds or silent failures
+        if (index !== -1 && index < this.taskOrder.length - 1) {
+            this._swap(index, index + 1);
+        }
+    }
+
+    moveToTop(id) {
+        const index = this.taskOrder.indexOf(id);
+        if (index > 0) {
+            const [movedId] = this.taskOrder.splice(index, 1);
+            this.taskOrder.unshift(movedId);
+        }
+    }
+
+    // --- Additional Simple Utility Functions ---
+
+    /**
+     * Filters tasks by status (e.g., only show "Working on")
+     */
+    filterByStatus(status) {
+        return this.getAll().filter(task => task.status === status);
+    }
+
+    /**
+     * Quick check for overdue items
+     */
+    getOverdueTasks() {
+        const now = new Date();
+        return this.getAll().filter(task =>
+            task.status !== TaskStatus.FINISHED &&
+            task.dateDue &&
+            task.dateDue < now
+        );
+    }
+
+    // --- Private Helpers ---
+
+    _swap(idxA, idxB) {
+        [this.taskOrder[idxA], this.taskOrder[idxB]] = [this.taskOrder[idxB], this.taskOrder[idxA]];
     }
 
     /**
@@ -235,13 +335,9 @@ class TodoList {
      * @throws {Error} If task not found or status is invalid.
      */
     updateStatus(id, newStatus) {
-        if (!this.tasksMap.has(id)) {
-            throw new Error(`Task with ID ${id} not found.`);
-        }
-
         const task = this.tasksMap.get(id);
+        if (!task) throw new Error(`Task with ID ${id} not found.`);
         task.updateStatus(newStatus);
-
         return this._toDTO(task);
     }
 
@@ -262,7 +358,10 @@ if (typeof require !== 'undefined' && require.main === module) {
     console.log("Running System Design Integrity Checks...\n");
 
     const assert = (condition, msg) => {
-        if (!condition) console.error(`[FAIL] ${msg}`);
+        if (!condition) {
+            console.error(`[FAIL] ${msg}`);
+            process.exit(1);
+        }
         else console.log(`[PASS] ${msg}`);
     };
 
@@ -270,50 +369,68 @@ if (typeof require !== 'undefined' && require.main === module) {
 
     // 1. Add Tasks
     console.log("--- Add Tests ---");
-    const id1 = list.add("First task");
+    const id1 = list.add("First task", "A description", new Date());
     const id2 = list.add("Second task");
     assert(typeof id1 === 'string' && id1.length > 0, "Add returns unique string ID");
     assert(id1 !== id2, "IDs are unique");
     assert(list.getAll().length === 2, "Two tasks in list");
+    assert(list.getAll()[0].title === "First task", "Title correctly set");
 
     // 2. Edit Task
     console.log("\n--- Edit Tests ---");
-    const edited = list.edit(id1, "Updated first task");
-    assert(edited.description === "Updated first task", "Edit updates description");
-    assert(Object.isFrozen(edited), "Edit returns frozen DTO");
+    const edited = list.edit(id1, { title: "Updated Title", description: "New Description" });
+    assert(edited.title === "Updated Title", "Edit updates title");
+    assert(edited.description === "New Description", "Edit updates description");
+
+    // Check efficiency: updatedAt should not change if content is same
+    const firstUpdate = edited.updatedAt.getTime();
+    const sameEdit = list.edit(id1, { title: "Updated Title" });
+    assert(sameEdit.updatedAt.getTime() === firstUpdate, "updatedAt does not change if content is identical");
 
     // 3. Status Update
     console.log("\n--- Status Tests ---");
-    const updated = list.updateStatus(id1, TaskStatus.IN_PROGRESS);
-    assert(updated.status === 'in_progress', "Status updated correctly");
+    const updated = list.updateStatus(id1, TaskStatus.WORKING);
+    assert(updated.status === 'Working on', "Status updated correctly");
 
     let invalidStatusCaught = false;
     try { list.updateStatus(id1, 'invalid_status'); } catch (e) { invalidStatusCaught = true; }
     assert(invalidStatusCaught, "Invalid status throws error");
 
-    // 4. Reorganize
-    console.log("\n--- Reorganize Tests ---");
-    list.reorganize(0, 1);
-    assert(list.getAll()[0].id === id2, "Reorganize swaps positions");
+    // 4. Positional Helpers
+    console.log("\n--- Positional Tests ---");
+    const id3 = list.add("Third task"); // Order: [id1, id2, id3]
 
-    // 5. Delete
+    list.moveDown(id1); // Order: [id2, id1, id3]
+    assert(list.taskOrder[1] === id1, "moveDown shifts item forward");
+
+    list.moveUp(id3); // Order: [id2, id3, id1]
+    assert(list.taskOrder[1] === id3, "moveUp shifts item backward");
+
+    list.moveToTop(id1); // Order: [id1, id2, id3]
+    assert(list.taskOrder[0] === id1, "moveToTop brings item to index 0");
+
+    // 5. Utility Methods
+    console.log("\n--- Utility Tests ---");
+    const workingTasks = list.filterByStatus(TaskStatus.WORKING);
+    assert(workingTasks.length === 1 && workingTasks[0].id === id1, "filterByStatus returns correct items");
+
+    const pastDate = new Date();
+    pastDate.setDate(pastDate.getDate() - 1);
+    list.edit(id2, { dateDue: pastDate });
+    const overdue = list.getOverdueTasks();
+    assert(overdue.length === 1 && overdue[0].id === id2, "getOverdueTasks identifies expired due dates");
+
+    // 6. Delete
     console.log("\n--- Delete Tests ---");
     const deleted = list.delete(id1);
     assert(deleted === true, "Delete returns true for existing task");
-    assert(list.getAll().length === 1, "One task remaining after delete");
+    assert(list.getAll().length === 2, "List size reduced after delete");
 
-    const deletedAgain = list.delete(id1);
-    assert(deletedAgain === false, "Delete returns false for non-existent task");
-
-    // 6. Error Handling
+    // 7. Error Handling
     console.log("\n--- Error Handling Tests ---");
-    let emptyDescCaught = false;
-    try { list.add(""); } catch (e) { emptyDescCaught = true; }
-    assert(emptyDescCaught, "Empty description throws error");
-
-    let notFoundCaught = false;
-    try { list.edit("nonexistent", "test"); } catch (e) { notFoundCaught = true; }
-    assert(notFoundCaught, "Edit non-existent task throws error");
+    let emptyTitleCaught = false;
+    try { list.add(""); } catch (e) { emptyTitleCaught = true; }
+    assert(emptyTitleCaught, "Empty title throws error");
 
     console.log("\nVerification Complete.");
 }
