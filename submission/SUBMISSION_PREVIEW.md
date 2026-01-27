@@ -23,6 +23,14 @@ This document is structured to mirror the challenge prompt:
 * **Part 1B: System Design** (Headless MVC & Normalized Schema)
 * **Part 2: Narrative Essays**
 
+## 4. Strategic Choice: The "Headless" Architecture
+
+**The temptation:** Many applicants build a graphical user interface (GUI) or website to "show off" frontend skills, despite the prompt's explicit instruction to the contrary ("do not use [HTML/jQuery]").
+
+**The Senior Approach:** Building a UI for a systems challenge often signals a lack of discipline in following requirements. It shifts the evaluation from "logic and architecture" to "visual design"—a distraction in a high-impact engineering context. 
+
+**Our Solution:** We treat the **Automated Test Suite (CLI)** as the primary interface. By providing a robust, colored terminal output (via `verify_submission.js`), we demonstrate that professional systems are built for automation and verifiable correctness. This "Service-First" architecture is what Forge's 200+ partner companies look for in senior talent.
+
 ***
 # PAGE 2: ALGORITHMS
 ***

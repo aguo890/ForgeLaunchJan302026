@@ -49,6 +49,14 @@ A unique constraint of this challenge is the delivery format: a single Google Do
 *   **Monospace Fonts**: All code blocks must be set to a monospace font (e.g., Courier New, Consolas, Roboto Mono) to ensure alignment and readability.
 *   **Code Blocks**: Utilizing the "Building Blocks > Code blocks" feature or single-cell tables with a grey background will visually distinguish code from the narrative text, mimicking an IDE environment.
 
+### 2.4 Strategic Choice: The "Headless" Architecture
+
+**The temptation:** Many applicants will feel compelled to build a graphical user interface (GUI) or website to "show off" their frontend skills, despite the prompt's explicit instruction to the contrary ("do not use [HTML/jQuery]").
+
+**The Trap:** Building a UI for a systems challenge often backfires. It signals a lack of discipline in following requirements and can distract from the core algorithmic complexity. Worse, it forces the evaluator to click through a UI rather than read the code, shifting the evaluation criteria from "logic and architecture" to "design and UX"—often a losing battle in a time-constrained test.
+
+**Our Approach:** We treat the **Automated Test Suite (CLI)** as the primary interface. By providing a robust, colored terminal output (via `verify_submission.js`), we demonstrate that backend systems are interacted with via **APIs and CLI tools**, not just web pages. This aligns with the "Senior Engineer" persona who values automation and verifiable correctness over visual flair.
+
 ## 3. Part 1: Software Engineering Project - Group A (Algorithmic Selection)
 
 The first section of the technical challenge requires selecting two questions from Group A. The available options are:

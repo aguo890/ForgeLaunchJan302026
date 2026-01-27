@@ -185,7 +185,7 @@ def update_qa_report(log_output, success):
 
     try:
         content = qa_file.read_text(encoding="utf-8")
-        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         # 1. Update Date (Regex for robustness)
         content = re.sub(r"(\*\*Date:\*\* ).*", f"\\g<1>{today}", content)
