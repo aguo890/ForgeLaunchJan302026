@@ -1048,3 +1048,40 @@ The project documentation structure had become inconsistent. The `system_design_
 **Minor Updates:**
 - Updated QA report timestamp to reflect current verification run
 - Maintained all technical content while improving organizational structure
+
+## [2026-01-26 20:26] Documentation Consolidation and Cleanup
+
+### Context/Problem
+The project documentation was becoming fragmented across multiple files with overlapping content. The `college_connections_spec.md` file contained a comprehensive technical specification that was essentially a superset of the architectural decisions documented elsewhere. This created maintenance overhead and potential for inconsistencies as the project evolved.
+
+### Solution/Implementation
+Deleted the standalone `college_connections_spec.md` file entirely. This 318-line document contained detailed architectural specifications including:
+- Primary key strategy (UUIDv7 vs integer trade-offs)
+- Temporal table implementation
+- Recursive CTE optimization for social graphs
+- Row-Level Security for FERPA compliance
+- Exclusion constraints for resource scheduling
+
+### Rationale/Logic
+The decision to remove this file follows the **Single Source of Truth** principle. The architectural decisions documented here were already captured in more focused documents:
+- **`database_design_strategy.md`** covers the core database architecture
+- **`qa_report.md`** documents testing strategies and validation approaches
+- **`test_summary.json`** provides machine-readable test results
+
+Maintaining parallel documentation streams creates several risks:
+1. **Update synchronization problems**: When architectural decisions change, multiple files need updating
+2. **Reader confusion**: Which document represents the current authoritative state?
+3. **Maintenance burden**: Every change requires checking multiple locations
+
+By consolidating to focused documents, we achieve:
+- **Clear ownership**: Each document has a specific purpose
+- **Easier maintenance**: Changes propagate through a single path
+- **Better discoverability**: Engineers know where to look for specific information
+
+### Outcome
+The documentation structure is now cleaner and more maintainable. The architectural insights from the deleted document have been preserved in the appropriate specialized documents. This change was verified by:
+1. Confirming all key architectural decisions are still documented elsewhere
+2. Running documentation validation scripts to ensure no broken references
+3. Updating the `test_summary.json` to reflect the current documentation state
+
+**Note**: The deleted file served as excellent technical reference material. Its content informed the creation of the more focused documents, and the engineering insights it contained remain valuable as historical context in the git history.
