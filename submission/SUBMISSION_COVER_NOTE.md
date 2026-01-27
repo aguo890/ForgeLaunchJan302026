@@ -14,7 +14,7 @@ In approaching this project, my goal was to transcend a basic functional solutio
 
 I have documented my full technical rationale and development methodology in the attached document. I look forward to the possibility of discussing my work and my "service-first" engineering philosophy with your team.
 
-**Submission Link:** [Paste Your Google Doc Link Here]
+**Submission Link:** https://docs.google.com/document/d/1jHK-mbhckhgGq6UjTet-UUNkELtmP6JEmPX6Z9PZjTQ/edit?usp=sharing
 
 Best regards,
 
