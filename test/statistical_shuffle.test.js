@@ -1,4 +1,6 @@
-const { shuffleArray } = require('./src/algorithms');
+const { test, describe } = require('node:test');
+const assert = require('node:assert');
+const { shuffleArray } = require('../src/algorithms');
 
 /**
  * Statistical Test Suite for shuffleArray
@@ -29,7 +31,7 @@ describe('shuffleArray Statistical Uniformity', () => {
         counts.forEach((row, rowIndex) => {
             row.forEach((count, colIndex) => {
                 const deviation = Math.abs(count - expectedFrequency) / expectedFrequency;
-                expect(deviation).toBeLessThan(marginOfError);
+                assert.ok(deviation < marginOfError, `Frequency deviation too high at [${rowIndex}][${colIndex}]: ${deviation}`);
             });
         });
     });
@@ -65,6 +67,6 @@ describe('shuffleArray Statistical Uniformity', () => {
         // For degrees of freedom (df) = k - 1 = 5
         // A chi-squared value < 11.07 corresponds to p > 0.05
         // This fails to reject the null hypothesis (that the distribution is uniform)
-        expect(chiSquared).toBeLessThan(11.07);
+        assert.ok(chiSquared < 11.07, `Chi-squared value too high: ${chiSquared}`);
     });
 });

@@ -85,17 +85,26 @@ const shuffleArray = (array) => {
 
 // --- A2: Pandigital Detection ---
 const isPandigital = (input) => {
-    const numString = String(input);
-    if (numString.length < 10) return false;
+    if (input == null) return false;
+    let str;
+
+    if (typeof input === 'number') {
+        if (input < 1023456789) return false;
+        if (!Number.isSafeInteger(input)) return false;
+        str = String(input);
+        if (str.includes('e')) return false;
+    } else {
+        str = String(input);
+    }
+
+    if (str.length < 10) return false;
 
     let mask = 0;
     const TARGET_MASK = 0b1111111111;
 
-    for (const char of numString) {
-        const code = char.charCodeAt(0);
-        // Ensure entire input is digits
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
         if (code < 48 || code > 57) return false;
-
         const digit = code - 48;
         mask |= (1 << digit);
     }
@@ -117,7 +126,11 @@ const TaskStatus = {
 
 class Task {
     constructor(title, description, dueDate) {
-        this.id = generateId(); // Unique ID for distributed readiness
+        // [REFINE] Collision-resistant UUIDs
+        this.id = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : '_' + Math.random().toString(36).substr(2, 9);
+
         this.title = title.trim();
         this.description = description.trim();
         this.dueDate = new Date(dueDate);
@@ -125,13 +138,21 @@ class Task {
         this.createdAt = new Date();
     }
 
-    update({ title, description, dueDate, status }) {
-        if (title) this.title = title.trim();
-        if (description) this.description = description.trim();
-        if (dueDate) this.dueDate = new Date(dueDate);
+    update(updates) {
+        // [REFINE] Object property safety
+        if (Object.prototype.hasOwnProperty.call(updates, 'title')) {
+            this.title = updates.title.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'description')) {
+            this.description = updates.description.trim();
+        }
+        if (Object.prototype.hasOwnProperty.call(updates, 'dueDate')) {
+            this.dueDate = new Date(updates.dueDate);
+        }
 
         // Strict validation for Status transitions
-        if (status) {
+        if (Object.prototype.hasOwnProperty.call(updates, 'status')) {
+            const status = updates.status;
             if (Object.values(TaskStatus).includes(status)) {
                 this.status = status;
             } else {
@@ -289,7 +310,7 @@ function verifyTodoList() {
     checksPerformed.push("Sanitization");
 
     // Check UUID
-    passed = (typeof t1.id === 'string' && t1.id.startsWith('_'));
+    passed = (typeof t1.id === 'string' && (t1.id.startsWith('_') || t1.id.length === 36));
     if (passed) logPass("UUID: Generated correctly");
     else logFail(`UUID: Invalid format ${t1.id}`);
     recordTest("todo_list", "UUID", passed);
