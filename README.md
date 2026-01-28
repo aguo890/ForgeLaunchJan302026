@@ -29,8 +29,23 @@ ForgeLaunchSpring2026Jan30/
 | Make      | (optional)|
 
 ### Setup
+
+
+#### Standard (Virtual Environment)
+It is recommended to use a virtual environment to manage dependencies.
+
+**Windows:**
 ```bash
-pip install openai python-dotenv   # For automation scripts
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+**macOS/Linux:**
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
 ### Run Tests

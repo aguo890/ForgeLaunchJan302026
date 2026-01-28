@@ -1108,3 +1108,24 @@ The documentation structure is now cleaner and more maintainable. The architectu
 6. **Slot-Based Reorganization**: Implements intuitive "insert AT position" semantics with proper edge case handling
 
 **Outcome:** The submission now contains a production-grade implementation that demonstrates professional software engineering practices, including proper encapsulation, state management, and API design. All tests continue to pass, and the documentation provides clear evidence of verification.
+
+## [2026-01-28 15:47] Documentation and Dependency Management Improvements
+
+### 1. **Context/Problem**
+The project's setup instructions were incomplete and platform-specific. The README only contained a generic `pip install` command without guidance on virtual environment usage, which is a Python best practice for dependency isolation. Additionally, Python dependencies were referenced inline but not formally tracked in a requirements file, making reproducible environments difficult.
+
+### 2. **Solution/Implementation**
+Added comprehensive virtual environment setup instructions for both Windows and Unix-like systems (macOS/Linux) in the README. Created a `requirements.txt` file listing the two Python dependencies (`openai` and `python-dotenv`) needed for automation scripts.
+
+### 3. **Rationale/Logic**
+Using **virtual environments** prevents dependency conflicts between projects and ensures consistent runtime environments across different developer machines. The `requirements.txt` file serves as the **single source of truth** for Python dependencies, enabling reproducible installations via `pip install -r requirements.txt`. This follows the **12-factor app methodology** for dependency declaration. The platform-specific activation commands (`.\\venv\\Scripts\\activate` vs `source venv/bin/activate`) address the fundamental difference in how shells execute scripts on Windows vs Unix systems.
+
+### 4. **Outcome**
+- Developers now have clear, copy-pasteable setup instructions
+- Dependency management is standardized and reproducible
+- QA report and test summary timestamps updated to reflect the current verification run
+- Test execution time increased from 18ms to 92ms (likely due to Node.js warm-up or system load variance, but all tests still pass)
+
+**Minor Updates:**
+- Updated timestamps in `docs/qa_report.md` and `docs/test_summary.json`
+- Fisher-Yates test permutation counts show expected statistical variation (all within ~2% tolerance)
